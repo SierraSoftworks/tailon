@@ -55,7 +55,7 @@ test-no-tailscale:
 
 # Clean build artifacts
 clean:
-	rm -f tailon
+	rm -f tailon tailon.exe
 	rm -f tailon-*
 	rm -f coverage.out
 	rm -f coverage.html
