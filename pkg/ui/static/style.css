@@ -43,7 +43,6 @@ body {
     box-shadow: var(--shadow);
     position: sticky;
     top: 0;
-    z-index: 100;
 }
 
 .header-content {
@@ -483,38 +482,57 @@ body {
     font-size: 0.75rem;
 }
 
+.btn-waiting {
+    background-color: var(--medium-gray);
+    color: var(--dark-gray);
+    cursor: default;
+    min-width: 120px;
+    font-size: 0.75rem;
+    gap: 0.25rem;
+}
+
+.btn-confirm {
+    background-color: var(--danger-color);
+    color: white;
+    animation: pulse-confirm 1s infinite;
+    min-width: 120px;
+    font-size: 0.75rem;
+    gap: 0.25rem;
+}
+
+.btn-confirm:hover:not(:disabled) {
+    background-color: #b91c1c;
+}
+
+@keyframes pulse-confirm {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
 /* Button Groups */
 .btn-group {
     display: inline-flex;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
 }
 
 .btn-group .btn {
     border-radius: 0;
     border: 1px solid var(--medium-gray);
     border-right: none;
-    background-color: white;
-    color: var(--text-color);
     margin: 0;
     position: relative;
 }
 
+.btn-group .btn:first-child {
+    border-radius: var(--border-radius) 0 0 var(--border-radius);
+}
+
 .btn-group .btn:last-child {
     border-right: 1px solid var(--medium-gray);
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
 }
 
-.btn-group .btn:hover:not(:disabled) {
-    background-color: var(--light-gray);
-}
-
-.btn-group .btn:active {
-    background-color: var(--medium-gray);
-}
-
-.btn-group .btn:disabled {
-    background-color: #f9fafb;
-    color: #9ca3af;
+.btn-group .btn:only-child {
+    border-radius: var(--border-radius);
 }
 
 /* SVG Icons */

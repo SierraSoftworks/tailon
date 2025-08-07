@@ -7,6 +7,8 @@ class ApplicationCard {
         this.isExpanded = false;
         this.details = null;
         this.element = null;
+        this.confirmationStates = new Map(); // Track button confirmation states by action
+        this.confirmationTimeouts = new Map(); // Track confirmation timeouts by action
     }
 
     // Create the application card DOM structure
@@ -83,28 +85,78 @@ class ApplicationCard {
 
         if (this.app.running) {
             buttons.push(
-                this.createActionButton('stop', Icons.stop(), 'Stop Application'),
-                this.createActionButton('restart', Icons.restart(), 'Restart Application')
+                this.createActionButtonWithState('stop', Icons.stop(), 'Stop Application'),
+                this.createActionButtonWithState('restart', Icons.restart(), 'Restart Application')
             );
         } else {
             buttons.push(
-                this.createActionButton('start', Icons.play(), 'Start Application')
+                this.createActionButtonWithState('start', Icons.play(), 'Start Application')
             );
         }
 
         return Utils.createElement('div', { className: 'btn-group' }, buttons);
     }
 
+    // Create an action button that respects confirmation state
+    createActionButtonWithState(action, icon, tooltip) {
+        const confirmationState = this.confirmationStates.get(action);
+        
+        if (confirmationState === 'waiting') {
+            return this.createConfirmationButton(action, 'waiting', 'Please wait...');
+        } else if (confirmationState === 'confirming') {
+            const confirmText = action === 'stop' ? 'Confirm Stop' : 'Confirm Restart';
+            return this.createConfirmationButton(action, 'confirm', confirmText);
+        } else {
+            return this.createActionButton(action, icon, tooltip);
+        }
+    }
+
+    // Create a confirmation state button
+    createConfirmationButton(action, state, text) {
+        const icon = this.getIconForAction(action);
+        
+        return Utils.createElement('button', {
+            className: `btn btn-${state}`,
+            onclick: (e) => {
+                e.stopPropagation();
+                this.performAction(action, e.target);
+            },
+            dataset: { 
+                tooltip: text,
+                action
+            }
+        }, [icon, text]);
+    }
+
+    // Get the appropriate icon for an action
+    getIconForAction(action) {
+        switch (action) {
+            case 'start':
+                return Icons.play();
+            case 'stop':
+                return Icons.stop();
+            case 'restart':
+                return Icons.restart();
+            default:
+                return Icons.play();
+        }
+    }
+
     // Create an action button
     createActionButton(action, icon, tooltip) {
-        return Utils.createElement('button', {
+        const button = Utils.createElement('button', {
             className: 'btn',
             onclick: (e) => {
                 e.stopPropagation();
                 this.performAction(action, e.target);
             },
-            dataset: { tooltip }
+            dataset: { 
+                tooltip,
+                action
+            }
         }, [icon]);
+        
+        return button;
     }
 
     // Render expand/collapse button
@@ -166,12 +218,78 @@ class ApplicationCard {
 
     // Perform application action
     async performAction(action, button) {
-        // Show confirmation for destructive actions
-        if ((action === 'stop' || action === 'restart') && 
-            !confirm(`Are you sure you want to ${action} ${this.appName}?`)) {
-            return;
+        const isDangerous = action === 'stop' || action === 'restart';
+        
+        if (isDangerous) {
+            const confirmationState = this.confirmationStates.get(action);
+            
+            if (!confirmationState) {
+                // First click - start confirmation process
+                this.startConfirmation(action, button);
+                return;
+            } else if (confirmationState === 'confirming') {
+                // Second click - proceed with action
+                this.clearConfirmation(action);
+                await this.executeAction(action, button);
+                return;
+            }
         }
+        
+        // Non-dangerous action or already confirmed - execute immediately
+        await this.executeAction(action, button);
+    }
 
+    // Start the confirmation process for dangerous actions
+    startConfirmation(action, button) {
+        // Set initial waiting state
+        this.confirmationStates.set(action, 'waiting');
+        this.refreshActionButtons();
+        
+        // After 1 second, change to confirmation state
+        setTimeout(() => {
+            if (this.confirmationStates.get(action) === 'waiting') {
+                this.confirmationStates.set(action, 'confirming');
+                this.refreshActionButtons();
+                
+                // Set 15-second timeout to reset
+                const timeoutId = setTimeout(() => {
+                    if (this.confirmationStates.get(action) === 'confirming') {
+                        this.resetButton(action);
+                    }
+                }, 15000);
+                
+                this.confirmationTimeouts.set(action, timeoutId);
+            }
+        }, 1000);
+    }
+
+    // Clear confirmation state and timeout
+    clearConfirmation(action) {
+        this.confirmationStates.delete(action);
+        const timeoutId = this.confirmationTimeouts.get(action);
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+            this.confirmationTimeouts.delete(action);
+        }
+    }
+
+    // Reset button to original state
+    resetButton(action) {
+        this.clearConfirmation(action);
+        this.refreshActionButtons();
+    }
+
+    // Refresh action buttons to reflect current state
+    refreshActionButtons() {
+        const btnGroup = this.element.querySelector('.btn-group');
+        if (btnGroup) {
+            const newActionButtons = this.renderActionButtons();
+            btnGroup.parentNode.replaceChild(newActionButtons, btnGroup);
+        }
+    }
+
+    // Execute the actual action
+    async executeAction(action, button) {
         this.setButtonLoading(button, true);
 
         try {
@@ -226,6 +344,13 @@ class ApplicationCard {
             this.details.updateApp(app);
         }
         
+        // Clear any ongoing confirmations before re-rendering
+        for (const timeoutId of this.confirmationTimeouts.values()) {
+            clearTimeout(timeoutId);
+        }
+        this.confirmationTimeouts.clear();
+        this.confirmationStates.clear();
+        
         // Re-render the header to reflect changes
         const newHeader = this.renderHeader();
         const oldHeader = this.element.querySelector('.app-accordion-header');
@@ -234,6 +359,13 @@ class ApplicationCard {
 
     // Cleanup when component is destroyed
     destroy() {
+        // Clear all confirmation timeouts
+        for (const timeoutId of this.confirmationTimeouts.values()) {
+            clearTimeout(timeoutId);
+        }
+        this.confirmationTimeouts.clear();
+        this.confirmationStates.clear();
+        
         if (this.details) {
             this.details.destroy();
         }

@@ -48,11 +48,11 @@ clean:
 
 # Run the application with default config
 run:
-	./tail-on
+	go run main.go
 
 # Run with verbose logging
 run-verbose:
-	./tail-on --verbose
+	go run main.go --verbose
 
 # Install dependencies
 deps:
