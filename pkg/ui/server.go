@@ -26,11 +26,12 @@ func NewServer(manager *apps.Manager) *Server {
 func (s *Server) Routes() *mux.Router {
 	r := mux.NewRouter()
 
-	// Serve the SPA index.html for all non-API routes
+	// Serve the SPA index.html for docs root and main routes
+	r.HandleFunc("/docs/", s.HandleSPA).Methods("GET")
 	r.HandleFunc("/", s.HandleSPA).Methods("GET")
-	r.HandleFunc("/docs", s.HandleSPA).Methods("GET")
 
 	// Static files
+	r.Handle("/docs/openapi.yaml", http.FileServer(http.FS(uiFS)))
 	r.PathPrefix("/static/").Handler(http.FileServer(http.FS(uiFS)))
 
 	// Add middleware

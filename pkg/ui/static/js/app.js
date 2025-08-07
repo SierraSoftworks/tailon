@@ -3,6 +3,7 @@ class TailOnApp {
     constructor() {
         this.router = new Router();
         this.dashboard = new Dashboard();
+        this.docs = new Docs();
         this.isInitialized = false;
     }
 
@@ -42,8 +43,8 @@ class TailOnApp {
         });
 
         // API docs route
-        this.router.register('/docs', () => {
-            this.showApiDocs();
+        this.router.register('/docs', async () => {
+            await this.showApiDocs();
         });
     }
 
@@ -58,8 +59,13 @@ class TailOnApp {
     }
 
     // Show API documentation
-    showApiDocs() {
-        window.location.href = '/docs';
+    async showApiDocs() {
+        try {
+            await this.docs.init();
+        } catch (error) {
+            console.error('Failed to load docs:', error);
+            this.showError('Failed to load documentation');
+        }
     }
 
     // Show error message

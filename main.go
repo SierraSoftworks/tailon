@@ -95,7 +95,7 @@ func runServer(cmd *cobra.Command, args []string) {
 		// Create main router and mount sub-routers
 		mainRouter = mux.NewRouter()
 		mainRouter.PathPrefix("/api/").Handler(apiServer.Routes())
-		mainRouter.PathPrefix("/docs/").Handler(apiServer.Routes())
+		mainRouter.PathPrefix("/docs/").Handler(uiServer.Routes())
 		mainRouter.PathPrefix("/").Handler(uiServer.Routes())
 
 		// Create HTTP server for Tailscale
@@ -138,7 +138,7 @@ func runServer(cmd *cobra.Command, args []string) {
 		// Create main router and mount sub-routers
 		mainRouter = mux.NewRouter()
 		mainRouter.PathPrefix("/api/").Handler(apiServer.Routes())
-		mainRouter.PathPrefix("/docs/").Handler(apiServer.Routes())
+		mainRouter.PathPrefix("/docs/").Handler(uiServer.Routes())
 		mainRouter.PathPrefix("/").Handler(uiServer.Routes())
 	}
 
