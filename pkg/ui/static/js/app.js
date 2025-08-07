@@ -4,6 +4,7 @@ class TailOnApp {
         this.router = new Router();
         this.dashboard = new Dashboard();
         this.docs = new Docs();
+        this.docsAPI = new DocsAPI();
         this.isInitialized = false;
     }
 
@@ -42,8 +43,13 @@ class TailOnApp {
             await this.showDashboard();
         });
 
-        // API docs route
+        // Main docs route
         this.router.register('/docs', async () => {
+            await this.showDocs();
+        });
+
+        // API docs route
+        this.router.register('/docs/api', async () => {
             await this.showApiDocs();
         });
     }
@@ -58,13 +64,23 @@ class TailOnApp {
         }
     }
 
-    // Show API documentation
-    async showApiDocs() {
+    // Show main documentation
+    async showDocs() {
         try {
             await this.docs.init();
         } catch (error) {
             console.error('Failed to load docs:', error);
             this.showError('Failed to load documentation');
+        }
+    }
+
+    // Show API documentation
+    async showApiDocs() {
+        try {
+            await this.docsAPI.init();
+        } catch (error) {
+            console.error('Failed to load API docs:', error);
+            this.showError('Failed to load API documentation');
         }
     }
 

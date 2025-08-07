@@ -885,64 +885,72 @@ body {
 }
 
 .docs-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem;
+    background: white;
+    color: var(--text-color);
+    padding: 3rem 2rem 2rem 2rem;
     text-align: center;
+    border-bottom: 1px solid var(--medium-gray);
 }
 
 .docs-header h1 {
-    margin: 0 0 0.5rem 0;
-    font-size: 2.5em;
-    font-weight: 300;
+    margin: 0 0 1rem 0;
+    font-size: 3rem;
+    font-weight: 200;
+    letter-spacing: -0.5px;
 }
 
 .docs-header p {
     margin: 0.5rem 0;
-    opacity: 0.9;
+    color: var(--secondary-color);
+    font-weight: 300;
+    font-size: 1.1rem;
 }
 
 /* Swagger UI integration styles */
 .swagger-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem;
+    background: white;
+    color: var(--text-color);
+    padding: 3rem 2rem 2rem 2rem;
     text-align: center;
+    border-bottom: 1px solid var(--medium-gray);
 }
 
 .swagger-header h1 {
-    margin: 0 0 0.5rem 0;
-    font-size: 2em;
-    font-weight: 300;
+    margin: 0 0 1rem 0;
+    font-size: 3rem;
+    font-weight: 200;
+    letter-spacing: -0.5px;
 }
 
 .swagger-header p {
-    margin: 0.5rem 0 1rem 0;
-    opacity: 0.9;
+    margin: 0.5rem 0 2rem 0;
+    color: var(--secondary-color);
+    font-weight: 300;
+    font-size: 1.1rem;
 }
 
 .swagger-nav {
-    margin-top: 1rem;
+    margin-top: 2rem;
 }
 
 .swagger-nav-link {
     display: inline-block;
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1.5rem;
     margin: 0 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: white;
+    color: var(--text-color);
     text-decoration: none;
-    border-radius: 25px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    font-weight: bold;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--medium-gray);
+    font-weight: 400;
     transition: all 0.2s ease;
     font-size: 0.9rem;
 }
 
 .swagger-nav-link:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    transform: translateY(-2px);
+    background: var(--light-gray);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 /* Override some Swagger UI styles to match our theme */
@@ -955,61 +963,64 @@ body {
 }
 
 .base-url {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 0.75rem;
+    background: var(--light-gray);
+    padding: 1rem;
     border-radius: var(--border-radius);
-    margin: 1rem 0 0 0;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
+    margin: 2rem 0 0 0;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-weight: 400;
+    border: 1px solid var(--medium-gray);
+    color: var(--text-color);
 }
 
 .docs-nav {
     background: var(--light-gray);
-    padding: 1rem;
+    padding: 1.5rem;
     border-bottom: 1px solid var(--medium-gray);
     text-align: center;
 }
 
 .docs-nav-link {
     display: inline-block;
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1.5rem;
     margin: 0 0.5rem;
     background: white;
-    color: #667eea;
+    color: var(--text-color);
     text-decoration: none;
-    border-radius: 25px;
-    border: 2px solid #667eea;
-    font-weight: bold;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--medium-gray);
+    font-weight: 400;
     transition: all 0.2s ease;
     font-size: 0.9rem;
 }
 
 .docs-nav-link:hover {
-    background: #667eea;
-    color: white;
-    transform: translateY(-2px);
+    background: var(--light-gray);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 .docs-nav-link.active {
-    background: var(--success-color);
-    border-color: var(--success-color);
+    background: var(--primary-color);
+    border-color: var(--primary-color);
     color: white;
 }
 
 .docs-content {
-    padding: 2rem;
+    padding: 3rem 2rem;
 }
 
 .docs-section {
-    margin-bottom: 2.5rem;
+    margin-bottom: 3rem;
 }
 
 .docs-section h2 {
     color: var(--text-color);
-    border-bottom: 2px solid #667eea;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1.5rem;
-    font-size: 1.75rem;
+    border-bottom: 1px solid var(--medium-gray);
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+    font-size: 2rem;
+    font-weight: 300;
 }
 
 .endpoint {
@@ -1127,4 +1138,185 @@ body {
     margin: 0.5rem 0 1rem 0;
     color: var(--text-color);
     overflow-x: auto;
+}
+
+/* Documentation page styles */
+.docs-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.docs-header {
+    margin-bottom: 4rem;
+    padding: 3rem 0 2rem 0;
+}
+
+.docs-header h1 {
+    margin: 0 0 1.5rem 0;
+    color: var(--text-color);
+    font-size: 3rem;
+    font-weight: 200;
+    letter-spacing: -0.5px;
+}
+
+.docs-header .lead {
+    font-size: 1.25rem;
+    color: var(--secondary-color);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.7;
+    font-weight: 300;
+}
+
+.docs-section {
+    margin-bottom: 3rem;
+    padding: 0 2rem;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.docs-section h2 {
+    margin: 0 0 2rem 0;
+    color: var(--text-color);
+    font-size: 2rem;
+    font-weight: 300;
+    border-bottom: 1px solid var(--medium-gray);
+    padding-bottom: 1rem;
+}
+
+.docs-section h3 {
+    margin: 2.5rem 0 1.5rem 0;
+    color: var(--text-color);
+    font-size: 1.5rem;
+    font-weight: 400;
+}
+
+.docs-section h4 {
+    margin: 2rem 0 1rem 0;
+    color: var(--text-color);
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+.docs-section p {
+    margin: 1.5rem 0;
+    line-height: 1.8;
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.docs-subsection {
+    margin: 2rem 0;
+}
+
+.setup-steps {
+    padding-left: 2rem;
+    margin: 2rem 0;
+}
+
+.setup-steps li {
+    margin: 2rem 0;
+    line-height: 1.8;
+    font-size: 1rem;
+}
+
+.setup-steps strong {
+    color: var(--text-color);
+    display: block;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.config-example {
+    background: var(--light-gray);
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-color);
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    white-space: pre;
+}
+
+.info-box {
+    background: var(--light-gray);
+    border: 1px solid var(--medium-gray);
+    border-left: 4px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin: 3rem 0;
+}
+
+.info-box h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-color);
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.info-box p {
+    margin: 0;
+    line-height: 1.7;
+}
+
+.info-box code {
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
+    border: 1px solid var(--medium-gray);
+}
+
+.docs-navigation {
+    border-top: 1px solid var(--medium-gray);
+    padding-top: 2rem;
+    margin-top: 3rem;
+}
+
+.docs-links {
+    display: grid;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.docs-link {
+    display: block;
+    padding: 2rem;
+    background: white;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow);
+}
+
+.docs-link:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+}
+
+.docs-link h4 {
+    margin: 0 0 0.75rem 0;
+    color: var(--text-color);
+    font-size: 1.3rem;
+    font-weight: 400;
+}
+
+.docs-link p {
+    margin: 0;
+    color: var(--secondary-color);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+@media (min-width: 768px) {
+    .docs-links {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
 }

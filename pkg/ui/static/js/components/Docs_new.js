@@ -20,6 +20,11 @@ class Docs {
         const content = document.getElementById('content');
         content.innerHTML = '';
 
+        // Page title
+        const title = Utils.createElement('div', { className: 'page-title' }, [
+            'TailOn Documentation'
+        ]);
+
         // Create docs container
         this.container = Utils.createElement('div', { className: 'docs-container' });
 
@@ -40,6 +45,7 @@ class Docs {
         this.container.appendChild(examples);
         this.container.appendChild(navigation);
 
+        content.appendChild(title);
         content.appendChild(this.container);
     }
 
@@ -116,11 +122,11 @@ tailscale:
   state_dir: "/var/lib/tailscale"  # State directory
   ephemeral: false              # Remove from tailnet on shutdown`);
 
-        const networkConfig = this.createSubSection('Network Configuration', `# For development/testing you can bind to localhost (optional)
+        const networkConfig = this.createSubSection('Network Configuration', `# Bind to local interface (optional)
 listen: "localhost:8080"
 
-# ⚠️ Security risk! - avoid binding to 0.0.0.0
-# listen: "0.0.0.0:8080"`);
+# For development/testing only - avoid binding to 0.0.0.0
+# listen: "0.0.0.0:8080"  # ⚠️ Security risk!`);
 
         section.appendChild(title);
         section.appendChild(intro);
