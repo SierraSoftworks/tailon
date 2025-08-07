@@ -53,8 +53,11 @@ const API = {
     },
 
     // Stop application
-    async stopApplication(name) {
-        return await this.request(`/api/v1/apps/${name}/stop`, { method: 'POST' });
+    async stopApplication(name, force = false) {
+        const endpoint = force ? 
+            `/api/v1/apps/${name}/stop?force=true` : 
+            `/api/v1/apps/${name}/stop`;
+        return await this.request(endpoint, { method: 'POST' });
     },
 
     // Restart application

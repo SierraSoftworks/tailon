@@ -378,6 +378,11 @@ body {
     color: var(--success-color);
 }
 
+.app-status.stopping {
+    background-color: rgba(217, 119, 6, 0.1);
+    color: var(--warning-color);
+}
+
 .app-status.stopped {
     background-color: rgba(220, 38, 38, 0.1);
     color: var(--danger-color);
@@ -391,6 +396,10 @@ body {
 
 .status-dot.running {
     background-color: var(--success-color);
+}
+
+.status-dot.stopping {
+    background-color: var(--warning-color);
 }
 
 .status-dot.stopped {

@@ -16,10 +16,11 @@ type Config struct {
 }
 
 type ApplicationConfig struct {
-	Name string   `json:"name" yaml:"name"`
-	Path string   `json:"path" yaml:"path"`
-	Args []string `json:"args" yaml:"args"`
-	Env  []string `json:"env" yaml:"env"`
+	Name       string   `json:"name" yaml:"name"`
+	Path       string   `json:"path" yaml:"path"`
+	Args       []string `json:"args" yaml:"args"`
+	Env        []string `json:"env" yaml:"env"`
+	StopSignal string   `json:"stop_signal" yaml:"stop_signal"` // Signal to use for stopping (default: SIGINT)
 }
 
 type TailscaleConfig struct {

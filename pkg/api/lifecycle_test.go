@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -92,7 +93,7 @@ func TestHandleRestartApp(t *testing.T) {
 	// Verify app is running
 	app, err := manager.GetApp("test-app")
 	assert.NoError(t, err)
-	assert.True(t, app.Running)
+	assert.True(t, app.IsRunning())
 
 	// Test restarting app that is already running
 	req = httptest.NewRequest("POST", "/api/v1/apps/test-app/restart", nil)
@@ -118,4 +119,53 @@ func TestHandleRestartApp(t *testing.T) {
 
 	// Clean up - stop the app
 	manager.StopApp("test-app")
+}
+
+func TestHandleStopAppWithForce(t *testing.T) {
+	server, manager := SetupTestServer()
+
+	// Test normal stop
+	// First start the app
+	err := manager.StartApp("test-app")
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("POST", "/api/v1/apps/test-app/stop", nil)
+	req = mux.SetURLVars(req, map[string]string{"app_name": "test-app"})
+	recorder := httptest.NewRecorder()
+
+	server.HandleStopApp(recorder, req)
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
+	var response map[string]string
+	err = json.Unmarshal(recorder.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "stopped", response["status"])
+
+	// Wait for app to stop completely
+	time.Sleep(100 * time.Millisecond)
+
+	// Start the app again for force stop test  
+	err = manager.StartApp("test-app")
+	require.NoError(t, err)
+
+	// Test force stop
+	req = httptest.NewRequest("POST", "/api/v1/apps/test-app/stop?force=true", nil)
+	req = mux.SetURLVars(req, map[string]string{"app_name": "test-app"})
+	recorder = httptest.NewRecorder()
+
+	server.HandleStopApp(recorder, req)
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
+	err = json.Unmarshal(recorder.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "force_stopped", response["status"])
+
+	// Test force stop on non-existent app
+	req = httptest.NewRequest("POST", "/api/v1/apps/non-existent/stop?force=true", nil)
+	req = mux.SetURLVars(req, map[string]string{"app_name": "non-existent"})
+	recorder = httptest.NewRecorder()
+
+	server.HandleStopApp(recorder, req)
+
+	assert.Equal(t, http.StatusBadRequest, recorder.Code)
 }

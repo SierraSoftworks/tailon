@@ -58,9 +58,25 @@ class ApplicationCard {
 
     // Render application status
     renderStatus() {
-        const statusClass = this.app.running ? 'running' : 'stopped';
-        const statusText = this.app.running ? 'Running' : 'Stopped';
-        const pidText = this.app.running && this.app.pid ? ` (PID: ${this.app.pid})` : '';
+        let statusClass, statusText;
+        
+        switch (this.app.state) {
+            case 'running':
+                statusClass = 'running';
+                statusText = 'Running';
+                break;
+            case 'stopping':
+                statusClass = 'stopping';
+                statusText = 'Stopping';
+                break;
+            case 'not_running':
+            default:
+                statusClass = 'stopped';
+                statusText = 'Stopped';
+                break;
+        }
+        
+        const pidText = this.app.state === 'running' && this.app.pid ? ` (PID: ${this.app.pid})` : '';
 
         return Utils.createElement('div', { className: `app-status ${statusClass}` }, [
             Utils.createElement('span', { className: `status-dot ${statusClass}` }),
@@ -83,12 +99,18 @@ class ApplicationCard {
     renderActionButtons() {
         const buttons = [];
 
-        if (this.app.running) {
+        if (this.app.state === 'running') {
             buttons.push(
                 this.createActionButtonWithState('stop', Icons.stop(), 'Stop Application'),
                 this.createActionButtonWithState('restart', Icons.restart(), 'Restart Application')
             );
+        } else if (this.app.state === 'stopping') {
+            // Show force stop button when app is stopping
+            buttons.push(
+                this.createActionButton('force-stop', Icons.stop(), 'Force Stop Application')
+            );
         } else {
+            // not_running state
             buttons.push(
                 this.createActionButtonWithState('start', Icons.play(), 'Start Application')
             );
@@ -218,9 +240,9 @@ class ApplicationCard {
 
     // Perform application action
     async performAction(action, button) {
-        const isDangerous = action === 'stop' || action === 'restart';
+        const isDangerous = action === 'stop' || action === 'restart' || action === 'force-stop';
         
-        if (isDangerous) {
+        if (isDangerous && action !== 'force-stop') {
             const confirmationState = this.confirmationStates.get(action);
             
             if (!confirmationState) {
@@ -235,7 +257,7 @@ class ApplicationCard {
             }
         }
         
-        // Non-dangerous action or already confirmed - execute immediately
+        // Non-dangerous action, force-stop, or already confirmed - execute immediately
         await this.executeAction(action, button);
     }
 
@@ -301,6 +323,9 @@ class ApplicationCard {
                 case 'stop':
                     result = await API.stopApplication(this.appName);
                     break;
+                case 'force-stop':
+                    result = await API.stopApplication(this.appName, true); // force stop
+                    break;
                 case 'restart':
                     result = await API.restartApplication(this.appName);
                     break;
@@ -309,6 +334,7 @@ class ApplicationCard {
             }
 
             const actionPast = action === 'stop' ? 'stopped' : 
+                              action === 'force-stop' ? 'force stopped' :
                               action === 'start' ? 'started' : 'restarted';
             
             Utils.showToast(`Successfully ${actionPast} ${this.appName}`, 'success');

@@ -4,11 +4,13 @@ applications:
     args: ["-c", "while true; do echo 'Hello from echo-server' $(date); sleep 2; done"]
     env:
       - "APP_NAME=echo-server"
+    stop_signal: "SIGTERM"
   - name: "counter"
     path: "/bin/sh"
     args: ["-c", "i=0; while true; do echo 'Counter: '$i; i=$((i+1)); sleep 1; done"]
     env:
       - "APP_NAME=counter"
+    stop_signal: "SIGINT"
 
 listen: "localhost:8080"
 

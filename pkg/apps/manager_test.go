@@ -34,7 +34,8 @@ func TestManagerGetApps(t *testing.T) {
 	assert.Len(t, apps, 1)
 	assert.Contains(t, apps, "test-app")
 	assert.Equal(t, "test-app", apps["test-app"].Config.Name)
-	assert.False(t, apps["test-app"].Running)
+	assert.Equal(t, StateNotRunning, apps["test-app"].State)
+	assert.False(t, apps["test-app"].IsRunning())
 }
 
 func TestManagerGetApp(t *testing.T) {
@@ -80,7 +81,8 @@ func TestManagerStartStopApp(t *testing.T) {
 	// Verify app is running
 	app, err := manager.GetApp("test-echo")
 	assert.NoError(t, err)
-	assert.True(t, app.Running)
+	assert.Equal(t, StateRunning, app.State)
+	assert.True(t, app.IsRunning())
 	assert.Greater(t, app.PID, 0)
 
 	// Test starting already running app
@@ -98,7 +100,8 @@ func TestManagerStartStopApp(t *testing.T) {
 	// Verify app is stopped
 	app, err = manager.GetApp("test-echo")
 	assert.NoError(t, err)
-	assert.False(t, app.Running)
+	assert.Equal(t, StateNotRunning, app.State)
+	assert.False(t, app.IsRunning())
 	assert.Equal(t, 0, app.PID)
 
 	// Test stopping non-existent app
@@ -176,4 +179,154 @@ func TestLogCircularBuffer(t *testing.T) {
 
 	// Stop the app
 	manager.StopApp("log-generator")
+}
+
+func TestManagerForceStopApp(t *testing.T) {
+	configs := []config.ApplicationConfig{
+		{
+			Name: "long-running",
+			Path: "/bin/sh",
+			Args: []string{"-c", "trap 'echo trapped; sleep 1' TERM; sleep 10"},
+		},
+	}
+
+	manager := NewManager(configs)
+
+	// Test force stopping non-existent app
+	err := manager.ForceStopApp("non-existent")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+
+	// Start app
+	err = manager.StartApp("long-running")
+	assert.NoError(t, err)
+
+	// Verify app is running
+	app, err := manager.GetApp("long-running")
+	assert.NoError(t, err)
+	assert.Equal(t, StateRunning, app.State)
+
+	// Force stop the app
+	err = manager.ForceStopApp("long-running")
+	assert.NoError(t, err)
+
+	// Wait for process to be killed
+	time.Sleep(200 * time.Millisecond)
+
+	// Verify app is stopped
+	app, err = manager.GetApp("long-running")
+	assert.NoError(t, err)
+	assert.Equal(t, StateNotRunning, app.State)
+	assert.Equal(t, 0, app.PID)
+
+	// Test force stopping already stopped app
+	err = manager.ForceStopApp("long-running")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not running")
+}
+
+func TestManagerStopSignalConfiguration(t *testing.T) {
+	configs := []config.ApplicationConfig{
+		{
+			Name:       "sigterm-app",
+			Path:       "/bin/sh",
+			Args:       []string{"-c", "trap 'echo got SIGTERM; exit' TERM; sleep 10"},
+			StopSignal: "SIGTERM",
+		},
+		{
+			Name:       "sigint-app",
+			Path:       "/bin/sh",
+			Args:       []string{"-c", "trap 'echo got SIGINT; exit' INT; sleep 10"},
+			StopSignal: "SIGINT",
+		},
+	}
+
+	manager := NewManager(configs)
+
+	// Start both apps
+	err := manager.StartApp("sigterm-app")
+	assert.NoError(t, err)
+	err = manager.StartApp("sigint-app")
+	assert.NoError(t, err)
+
+	// Stop both apps (should use their configured signals)
+	err = manager.StopApp("sigterm-app")
+	assert.NoError(t, err)
+	err = manager.StopApp("sigint-app")
+	assert.NoError(t, err)
+
+	// Wait for processes to handle signals
+	time.Sleep(200 * time.Millisecond)
+
+	// Verify both apps are stopped
+	app1, err := manager.GetApp("sigterm-app")
+	assert.NoError(t, err)
+	assert.Equal(t, StateNotRunning, app1.State)
+
+	app2, err := manager.GetApp("sigint-app")
+	assert.NoError(t, err)
+	assert.Equal(t, StateNotRunning, app2.State)
+}
+
+func TestParseStopSignal(t *testing.T) {
+	manager := &Manager{}
+
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"", "interrupt"}, // default SIGINT
+		{"SIGINT", "interrupt"},
+		{"SIGTERM", "terminated"},
+		{"SIGQUIT", "quit"},
+		{"SIGKILL", "killed"},
+		{"SIGHUP", "hangup"},
+		{"INVALID", "interrupt"}, // fallback to SIGINT
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			signal := manager.parseStopSignal(test.input)
+			assert.Contains(t, signal.String(), test.expected)
+		})
+	}
+}
+
+func TestApplicationStates(t *testing.T) {
+	configs := []config.ApplicationConfig{
+		{
+			Name: "state-test",
+			Path: "/bin/sh",
+			Args: []string{"-c", "sleep 0.5"},
+		},
+	}
+
+	manager := NewManager(configs)
+
+	// Initial state should be not running
+	app, err := manager.GetApp("state-test")
+	assert.NoError(t, err)
+	assert.Equal(t, StateNotRunning, app.State)
+	assert.False(t, app.IsRunning())
+
+	// Start app - should be running
+	err = manager.StartApp("state-test")
+	assert.NoError(t, err)
+
+	app, err = manager.GetApp("state-test")
+	assert.NoError(t, err)
+	assert.Equal(t, StateRunning, app.State)
+	assert.True(t, app.IsRunning())
+
+	// Stop app - should transition to stopping then not running
+	err = manager.StopApp("state-test")
+	assert.NoError(t, err)
+
+	// Wait for process to exit
+	time.Sleep(200 * time.Millisecond)
+
+	app, err = manager.GetApp("state-test")
+	assert.NoError(t, err)
+	assert.Equal(t, StateNotRunning, app.State)
+	assert.False(t, app.IsRunning())
 }

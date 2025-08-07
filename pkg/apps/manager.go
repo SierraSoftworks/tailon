@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/sierrasoftworks/tail-on/pkg/config"
@@ -16,19 +17,33 @@ import (
 
 const maxLogLines = 1000
 
+// ApplicationState represents the current state of an application
+type ApplicationState string
+
+const (
+	StateNotRunning ApplicationState = "not_running"
+	StateRunning    ApplicationState = "running"
+	StateStopping   ApplicationState = "stopping"
+)
+
 type LogLine struct {
 	Timestamp time.Time `json:"timestamp"`
 	Message   string    `json:"message"`
 }
 
 type Application struct {
-	Config  config.ApplicationConfig `json:"config"`
-	Running bool                     `json:"running"`
-	PID     int                      `json:"pid,omitempty"`
-	logs    []LogLine
-	logMux  sync.RWMutex
-	cmd     *exec.Cmd
-	cancel  context.CancelFunc
+	Config config.ApplicationConfig `json:"config"`
+	State  ApplicationState         `json:"state"`
+	PID    int                      `json:"pid,omitempty"`
+	logs   []LogLine
+	logMux sync.RWMutex
+	cmd    *exec.Cmd
+	cancel context.CancelFunc
+}
+
+// IsRunning returns true if the application is currently running
+func (a *Application) IsRunning() bool {
+	return a.State == StateRunning
 }
 
 type Manager struct {
@@ -41,6 +56,7 @@ func NewManager(configs []config.ApplicationConfig) *Manager {
 	for _, cfg := range configs {
 		apps[cfg.Name] = &Application{
 			Config: cfg,
+			State:  StateNotRunning,
 			logs:   make([]LogLine, 0, maxLogLines),
 		}
 	}
@@ -57,9 +73,9 @@ func (m *Manager) GetApps() map[string]*Application {
 	result := make(map[string]*Application)
 	for name, app := range m.apps {
 		result[name] = &Application{
-			Config:  app.Config,
-			Running: app.Running,
-			PID:     app.PID,
+			Config: app.Config,
+			State:  app.State,
+			PID:    app.PID,
 		}
 	}
 	return result
@@ -75,9 +91,9 @@ func (m *Manager) GetApp(name string) (*Application, error) {
 	}
 
 	return &Application{
-		Config:  app.Config,
-		Running: app.Running,
-		PID:     app.PID,
+		Config: app.Config,
+		State:  app.State,
+		PID:    app.PID,
 	}, nil
 }
 
@@ -90,7 +106,7 @@ func (m *Manager) StartApp(name string) error {
 		return fmt.Errorf("application %s not found", name)
 	}
 
-	if app.Running {
+	if app.IsRunning() {
 		return fmt.Errorf("application %s is already running", name)
 	}
 
@@ -117,7 +133,7 @@ func (m *Manager) StartApp(name string) error {
 
 	app.cmd = cmd
 	app.cancel = cancel
-	app.Running = true
+	app.State = StateRunning
 	app.PID = cmd.Process.Pid
 
 	// Start log collection
@@ -131,7 +147,7 @@ func (m *Manager) StartApp(name string) error {
 		}
 
 		m.mux.Lock()
-		app.Running = false
+		app.State = StateNotRunning
 		app.PID = 0
 		app.cmd = nil
 		app.cancel = nil
@@ -145,6 +161,14 @@ func (m *Manager) StartApp(name string) error {
 }
 
 func (m *Manager) StopApp(name string) error {
+	return m.stopApp(name, false)
+}
+
+func (m *Manager) ForceStopApp(name string) error {
+	return m.stopApp(name, true)
+}
+
+func (m *Manager) stopApp(name string, force bool) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -153,15 +177,59 @@ func (m *Manager) StopApp(name string) error {
 		return fmt.Errorf("application %s not found", name)
 	}
 
-	if !app.Running {
+	if !app.IsRunning() {
 		return fmt.Errorf("application %s is not running", name)
 	}
 
+	// Set state to stopping
+	app.State = StateStopping
+
+	if force {
+		// Force stop with SIGKILL
+		if app.cmd != nil && app.cmd.Process != nil {
+			if err := app.cmd.Process.Kill(); err != nil {
+				logrus.WithField("app", name).WithError(err).Warn("Failed to force kill application")
+			}
+		}
+	} else {
+		// Graceful stop with configured signal or SIGINT
+		if app.cmd != nil && app.cmd.Process != nil {
+			sig := m.parseStopSignal(app.Config.StopSignal)
+			if err := app.cmd.Process.Signal(sig); err != nil {
+				logrus.WithField("app", name).WithError(err).Warn("Failed to signal application")
+			}
+		}
+	}
+
+	// Also cancel the context as a backup
 	if app.cancel != nil {
 		app.cancel()
 	}
 
 	return nil
+}
+
+// parseStopSignal converts a string signal name to syscall.Signal
+func (m *Manager) parseStopSignal(signalName string) os.Signal {
+	if signalName == "" {
+		return syscall.SIGINT // default
+	}
+
+	switch signalName {
+	case "SIGINT":
+		return syscall.SIGINT
+	case "SIGTERM":
+		return syscall.SIGTERM
+	case "SIGQUIT":
+		return syscall.SIGQUIT
+	case "SIGKILL":
+		return syscall.SIGKILL
+	case "SIGHUP":
+		return syscall.SIGHUP
+	default:
+		logrus.WithField("signal", signalName).Warn("Unknown signal, defaulting to SIGINT")
+		return syscall.SIGINT
+	}
 }
 
 func (m *Manager) GetLogs(name string) ([]LogLine, error) {

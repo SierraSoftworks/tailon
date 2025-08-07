@@ -29,14 +29,29 @@ func (s *Server) HandleStopApp(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	appName := vars["app_name"]
 
-	if err := s.manager.StopApp(appName); err != nil {
-		logrus.WithError(err).WithField("app", appName).Error("Failed to stop application")
+	// Check for force parameter
+	force := r.URL.Query().Get("force") == "true"
+
+	var err error
+	if force {
+		err = s.manager.ForceStopApp(appName)
+	} else {
+		err = s.manager.StopApp(appName)
+	}
+
+	if err != nil {
+		logrus.WithError(err).WithField("app", appName).WithField("force", force).Error("Failed to stop application")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	status := "stopped"
+	if force {
+		status = "force_stopped"
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
+	json.NewEncoder(w).Encode(map[string]string{"status": status})
 }
 
 // HandleRestartApp restarts an application (stop then start)
