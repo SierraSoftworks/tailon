@@ -2,6 +2,7 @@ package userctx
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -17,7 +18,7 @@ type User struct {
 // Anonymous returns the default anonymous user
 func Anonymous() *User {
 	return &User{
-		ID:          "anonymous",
+		ID:          "$anonymous$",
 		DisplayName: "Anonymous",
 		IsAnonymous: true,
 	}
@@ -64,6 +65,19 @@ func NewUserEvent(user *User, action, target, details string) *UserEvent {
 		Target:    target,
 		Details:   details,
 	}
+}
+
+// String implements the fmt.Stringer interface for better logging
+func (e *UserEvent) String() string {
+	userName := "Anonymous"
+	if e.User != nil && !e.User.IsAnonymous {
+		userName = e.User.DisplayName
+	}
+
+	if e.Details != "" {
+		return fmt.Sprintf("%s %s %s (%s) at %s", userName, e.Action, e.Target, e.Details, e.Timestamp.Format("15:04:05"))
+	}
+	return fmt.Sprintf("%s %s %s at %s", userName, e.Action, e.Target, e.Timestamp.Format("15:04:05"))
 }
 
 // Key type for context values to avoid collisions

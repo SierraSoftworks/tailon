@@ -31,9 +31,7 @@ func (m *Middleware) Handler(next http.Handler) http.Handler {
 
 		// Add user information to logger context
 		logger := logrus.WithFields(logrus.Fields{
-			"user_id":   user.ID,
-			"user_name": user.DisplayName,
-			"anonymous": user.IsAnonymous,
+			"user_id": user.ID,
 		})
 
 		// Add logger to context for downstream use
@@ -78,8 +76,6 @@ func GetLoggerFromContext(ctx context.Context) *logrus.Entry {
 	}
 	// Fallback to default logger with anonymous user
 	return logrus.WithFields(logrus.Fields{
-		"user_id":   "anonymous",
-		"user_name": "Anonymous",
-		"anonymous": true,
+		"user_id": "$anonymous$",
 	})
 }

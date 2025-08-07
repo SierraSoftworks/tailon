@@ -12,7 +12,7 @@ func TestUserContext(t *testing.T) {
 	// Test anonymous user
 	anonymous := Anonymous()
 	assert.True(t, anonymous.IsAnonymous)
-	assert.Equal(t, "anonymous", anonymous.ID)
+	assert.Equal(t, "$anonymous$", anonymous.ID)
 	assert.Equal(t, "Anonymous", anonymous.DisplayName)
 
 	// Test context with user
@@ -26,14 +26,14 @@ func TestUserContext(t *testing.T) {
 	emptyCtx := context.Background()
 	defaultUser := FromContext(emptyCtx)
 	assert.True(t, defaultUser.IsAnonymous)
-	assert.Equal(t, "anonymous", defaultUser.ID)
+	assert.Equal(t, "$anonymous$", defaultUser.ID)
 }
 
 func TestTailscaleUser(t *testing.T) {
 	// Test with nil user info
 	user := NewTailscaleUser(nil)
 	assert.True(t, user.IsAnonymous)
-	assert.Equal(t, "anonymous", user.ID)
+	assert.Equal(t, "$anonymous$", user.ID)
 
 	// Test with valid user info
 	userInfo := &TailscaleUserInfo{

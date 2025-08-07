@@ -30,7 +30,7 @@ func TestHandleWhoAmI(t *testing.T) {
 
 	// Should be anonymous user
 	assert.True(t, user.IsAnonymous)
-	assert.Equal(t, "anonymous", user.ID)
+	assert.Equal(t, "$anonymous$", user.ID)
 	assert.Equal(t, "Anonymous", user.DisplayName)
 }
 
