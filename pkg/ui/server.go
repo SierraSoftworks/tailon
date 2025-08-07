@@ -63,7 +63,7 @@ func (s *Server) HandleOpenAPISpecYAML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Header().Set("Content-Type", "application/yaml")
 	w.Write(openapiFile)
 }
 
