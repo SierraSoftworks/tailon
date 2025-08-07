@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/sierrasoftworks/tailon/pkg/config"
@@ -242,13 +241,9 @@ func (m *Manager) stopApp(ctx context.Context, name string, force bool) error {
 	details := ""
 	if force {
 		action = "force_stop"
-		details = "Using SIGKILL"
+		details = getPlatformStopDetails(true, "")
 	} else {
-		signal := app.Config.StopSignal
-		if signal == "" {
-			signal = "SIGINT"
-		}
-		details = fmt.Sprintf("Using %s", signal)
+		details = getPlatformStopDetails(false, app.Config.StopSignal)
 	}
 
 	event := userctx.NewUserEvent(user, action, name, details)
@@ -270,18 +265,17 @@ func (m *Manager) stopApp(ctx context.Context, name string, force bool) error {
 	m.addAuditLog(app, user, auditMsg)
 
 	if force {
-		// Force stop with SIGKILL
+		// Force stop with SIGKILL on Unix or TerminateProcess on Windows
 		if app.cmd != nil && app.cmd.Process != nil {
 			if err := app.cmd.Process.Kill(); err != nil {
 				logger.WithField("app", name).WithError(err).Warn("Failed to force kill application")
 			}
 		}
 	} else {
-		// Graceful stop with configured signal or SIGINT
+		// Graceful stop - use different approaches for different platforms
 		if app.cmd != nil && app.cmd.Process != nil {
-			sig := m.parseStopSignal(app.Config.StopSignal)
-			if err := app.cmd.Process.Signal(sig); err != nil {
-				logger.WithField("app", name).WithError(err).Warn("Failed to signal application")
+			if err := m.gracefulStop(app.cmd.Process, app.Config.StopSignal); err != nil {
+				logger.WithField("app", name).WithError(err).Warn("Failed to gracefully stop application")
 			}
 		}
 	}
@@ -292,29 +286,6 @@ func (m *Manager) stopApp(ctx context.Context, name string, force bool) error {
 	}
 
 	return nil
-}
-
-// parseStopSignal converts a string signal name to syscall.Signal
-func (m *Manager) parseStopSignal(signalName string) os.Signal {
-	if signalName == "" {
-		return syscall.SIGINT // default
-	}
-
-	switch signalName {
-	case "SIGINT":
-		return syscall.SIGINT
-	case "SIGTERM":
-		return syscall.SIGTERM
-	case "SIGQUIT":
-		return syscall.SIGQUIT
-	case "SIGKILL":
-		return syscall.SIGKILL
-	case "SIGHUP":
-		return syscall.SIGHUP
-	default:
-		logrus.WithField("signal", signalName).Warn("Unknown signal, defaulting to SIGINT")
-		return syscall.SIGINT
-	}
 }
 
 func (m *Manager) GetLogs(name string) ([]LogLine, error) {

@@ -271,30 +271,6 @@ func TestManagerStopSignalConfiguration(t *testing.T) {
 	assert.Equal(t, StateNotRunning, app2.State)
 }
 
-func TestParseStopSignal(t *testing.T) {
-	manager := &Manager{}
-
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"", "interrupt"}, // default SIGINT
-		{"SIGINT", "interrupt"},
-		{"SIGTERM", "terminated"},
-		{"SIGQUIT", "quit"},
-		{"SIGKILL", "killed"},
-		{"SIGHUP", "hangup"},
-		{"INVALID", "interrupt"}, // fallback to SIGINT
-	}
-
-	for _, test := range tests {
-		t.Run(test.input, func(t *testing.T) {
-			signal := manager.parseStopSignal(test.input)
-			assert.Contains(t, signal.String(), test.expected)
-		})
-	}
-}
-
 func TestApplicationStates(t *testing.T) {
 	configs := []config.ApplicationConfig{
 		{

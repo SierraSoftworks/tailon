@@ -1,6 +1,6 @@
 # Makefile for tailon
 
-.PHONY: build test test-verbose test-coverage clean run help
+.PHONY: build build-all test test-verbose test-coverage clean run help
 
 # Default target
 all: build
@@ -8,6 +8,19 @@ all: build
 # Build the application
 build:
 	go build -o tailon .
+
+# Cross-compile for all supported platforms
+build-all:
+	@echo "Building for all platforms..."
+	GOOS=windows GOARCH=amd64 go build -o tailon-windows-amd64.exe .
+	GOOS=windows GOARCH=arm64 go build -o tailon-windows-arm64.exe .
+	GOOS=linux GOARCH=amd64 go build -o tailon-linux-amd64 .
+	GOOS=linux GOARCH=arm64 go build -o tailon-linux-arm64 .
+	GOOS=darwin GOARCH=amd64 go build -o tailon-darwin-amd64 .
+	GOOS=darwin GOARCH=arm64 go build -o tailon-darwin-arm64 .
+	@echo "Cross-compilation complete!"
+	@echo "Built binaries:"
+	@ls -la tailon-*
 
 # Run tests
 test:
@@ -43,6 +56,7 @@ test-no-tailscale:
 # Clean build artifacts
 clean:
 	rm -f tailon
+	rm -f tailon-*
 	rm -f coverage.out
 	rm -f coverage.html
 
@@ -71,6 +85,7 @@ lint:
 help:
 	@echo "Available targets:"
 	@echo "  build           - Build the application"
+	@echo "  build-all       - Cross-compile for all supported platforms"
 	@echo "  test            - Run all tests"
 	@echo "  test-verbose    - Run tests with verbose output"
 	@echo "  test-coverage   - Run tests with coverage report"
