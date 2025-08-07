@@ -11,7 +11,7 @@ info:
     url: https://sierrasoftworks.com
   license:
     name: MIT
-    url: https://github.com/SierraSoftworks/tail-on/blob/main/LICENSE
+    url: https://github.com/SierraSoftworks/tailon/blob/main/LICENSE
 
 servers:
   - url: http://localhost:8080
@@ -20,8 +20,8 @@ servers:
     description: Tailscale network server
     variables:
       hostname:
-        default: tail-on-server
-        description: The hostname configured for the tail-on server on your Tailnet
+        default: tailon-server
+        description: The hostname configured for the tailon server on your Tailnet
 
 paths:
   /api/v1/whoami:
@@ -493,4 +493,4 @@ tags:
 
 externalDocs:
   description: GitHub Repository
-  url: https://github.com/SierraSoftworks/tail-on
+  url: https://github.com/SierraSoftworks/tailon

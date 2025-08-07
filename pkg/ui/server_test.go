@@ -4,8 +4,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sierrasoftworks/tail-on/pkg/apps"
-	"github.com/sierrasoftworks/tail-on/pkg/config"
+	"github.com/sierrasoftworks/tailon/pkg/apps"
+	"github.com/sierrasoftworks/tailon/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,5 +28,5 @@ func TestHandleOpenAPISpecYAML(t *testing.T) {
 
 	body := recorder.Body.String()
 	assert.Contains(t, body, "openapi:")
-	assert.Contains(t, body, "tail-on")
+	assert.Contains(t, body, "tailon")
 }

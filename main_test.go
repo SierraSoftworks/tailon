@@ -11,7 +11,7 @@ import (
 
 func TestRootCommand(t *testing.T) {
 	// Test that the root command is properly configured
-	assert.Equal(t, "tail-on", rootCmd.Use)
+	assert.Equal(t, "tailon", rootCmd.Use)
 	assert.NotEmpty(t, rootCmd.Short)
 	assert.NotEmpty(t, rootCmd.Long)
 }
@@ -51,7 +51,7 @@ tailscale:
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{"tail-on", "--config", configFile, "--help"}
+	os.Args = []string{"tailon", "--config", configFile, "--help"}
 
 	// This should not panic and should show help without starting the server
 	err = rootCmd.Execute()
@@ -63,7 +63,7 @@ func TestInvalidConfigFile(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{"tail-on", "--config", "/non/existent/file.yaml", "--help"}
+	os.Args = []string{"tailon", "--config", "/non/existent/file.yaml", "--help"}
 
 	// Should still work for help command
 	err := rootCmd.Execute()

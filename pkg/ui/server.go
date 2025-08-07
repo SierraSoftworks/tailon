@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/sierrasoftworks/tail-on/pkg/apps"
+	"github.com/sierrasoftworks/tailon/pkg/apps"
 	"github.com/sirupsen/logrus"
 )
 

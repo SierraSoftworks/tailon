@@ -27,7 +27,7 @@ class TailOnApp {
             this.router.start();
 
             this.isInitialized = true;
-            console.log('Tail-On SPA initialized successfully');
+            console.log('tailon SPA initialized successfully');
 
         } catch (error) {
             console.error('Failed to initialize application:', error);

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/sierrasoftworks/tail-on/pkg/apps"
-	"github.com/sierrasoftworks/tail-on/pkg/config"
-	"github.com/sierrasoftworks/tail-on/pkg/userctx"
+	"github.com/sierrasoftworks/tailon/pkg/apps"
+	"github.com/sierrasoftworks/tailon/pkg/config"
+	"github.com/sierrasoftworks/tailon/pkg/userctx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sierrasoftworks/tail-on/pkg/userctx"
+	"github.com/sierrasoftworks/tailon/pkg/userctx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

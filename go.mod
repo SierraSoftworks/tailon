@@ -1,4 +1,4 @@
-module github.com/sierrasoftworks/tail-on
+module github.com/sierrasoftworks/tailon
 
 go 1.24.4
 

@@ -14,10 +14,10 @@ import (
 	"github.com/spf13/cobra"
 	"tailscale.com/tsnet"
 
-	"github.com/sierrasoftworks/tail-on/pkg/api"
-	"github.com/sierrasoftworks/tail-on/pkg/apps"
-	"github.com/sierrasoftworks/tail-on/pkg/config"
-	"github.com/sierrasoftworks/tail-on/pkg/ui"
+	"github.com/sierrasoftworks/tailon/pkg/api"
+	"github.com/sierrasoftworks/tailon/pkg/apps"
+	"github.com/sierrasoftworks/tailon/pkg/config"
+	"github.com/sierrasoftworks/tailon/pkg/ui"
 )
 
 var (
@@ -28,9 +28,9 @@ var (
 var Version = "dev"
 
 var rootCmd = &cobra.Command{
-	Use:   "tail-on",
+	Use:   "tailon",
 	Short: "A web service for managing applications over Tailscale",
-	Long: `tail-on is a web service that allows you to manage and monitor applications
+	Long: `tailon is a web service that allows you to manage and monitor applications
 over your Tailscale network. It provides APIs to start, stop, and stream logs
 from configured applications.`,
 	Run:     runServer,
@@ -211,6 +211,6 @@ func isLocalhostBinding(addr string) bool {
 		// If we can't parse it, assume it's not safe
 		return false
 	}
-	
+
 	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }

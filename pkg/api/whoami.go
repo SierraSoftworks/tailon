@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/sierrasoftworks/tail-on/pkg/userctx"
+	"github.com/sierrasoftworks/tailon/pkg/userctx"
 )
 
 // HandleWhoAmI returns information about the current user

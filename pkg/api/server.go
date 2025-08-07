@@ -2,8 +2,8 @@ package api
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/sierrasoftworks/tail-on/pkg/apps"
-	"github.com/sierrasoftworks/tail-on/pkg/userctx"
+	"github.com/sierrasoftworks/tailon/pkg/apps"
+	"github.com/sierrasoftworks/tailon/pkg/userctx"
 	"tailscale.com/client/tailscale"
 )
 

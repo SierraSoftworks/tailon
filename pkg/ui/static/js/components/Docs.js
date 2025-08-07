@@ -47,7 +47,7 @@ class Docs {
     // Create docs header
     createHeader() {
         const header = Utils.createElement('div', { className: 'docs-header' }, [
-            Utils.createElement('h1', {}, ['tail-on API']),
+            Utils.createElement('h1', {}, ['TailOn API']),
             Utils.createElement('p', {}, ['A web service for managing applications over Tailscale']),
             Utils.createElement('div', { className: 'base-url' }, [`Base URL: ${this.baseURL}`])
         ]);
@@ -185,7 +185,7 @@ class Docs {
 
         const links = [
             { label: 'OpenAPI Spec', href: '/docs/openapi.yaml' },
-            { label: 'GitHub Repository', href: 'https://github.com/SierraSoftworks/tail-on' },
+            { label: 'GitHub Repository', href: 'https://github.com/SierraSoftworks/tailon' },
             { label: 'Tailscale', href: 'https://tailscale.com/' }
         ];
 

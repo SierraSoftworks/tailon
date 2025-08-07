@@ -22,5 +22,5 @@ listen: "localhost:8080"
 
 tailscale:
   enabled: false
-  name: "tail-on-server"
+  name: "tailon-server"
   state_dir: "/tmp/tailscale-state"

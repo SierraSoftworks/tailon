@@ -1,4 +1,4 @@
-# Makefile for tail-on
+# Makefile for tailon
 
 .PHONY: build test test-verbose test-coverage clean run help
 
@@ -7,7 +7,7 @@ all: build
 
 # Build the application
 build:
-	go build -o tail-on .
+	go build -o tailon .
 
 # Run tests
 test:
@@ -42,7 +42,7 @@ test-no-tailscale:
 
 # Clean build artifacts
 clean:
-	rm -f tail-on
+	rm -f tailon
 	rm -f coverage.out
 	rm -f coverage.html
 

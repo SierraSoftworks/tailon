@@ -1,4 +1,4 @@
-# tail-on
+# tailon
 
 **Easily manage and monitor applications on your machine via [Tailscale](https://tailscale.com/).**
 
@@ -7,33 +7,33 @@ This project provides a web-based application manager that runs on your [Tailsca
 ## Installation
 
 ```bash
-go install github.com/sierrasoftworks/tail-on@latest
+go install github.com/sierrasoftworks/tailon@latest
 ```
 
 ## Usage
 
-At its simplest, you can start managing applications by creating a configuration file and running the `tail-on` command:
+At its simplest, you can start managing applications by creating a configuration file and running the `tailon` command:
 
 ```bash
-# Start tail-on with the default configuration file
-tail-on
+# Start tailon with the default configuration file
+tailon
 
 # Start with a custom configuration file
-tail-on --config /path/to/config.yaml
+tailon --config /path/to/config.yaml
 
 # Enable verbose logging
-tail-on --verbose
+tailon --verbose
 ```
 
 ### Using with Tailscale
 
-To expose tail-on on your Tailscale network, you'll need to configure the Tailscale integration in your configuration file. Here's how to set it up:
+To expose tailon on your Tailscale network, you'll need to configure the Tailscale integration in your configuration file. Here's how to set it up:
 
 #### Basic Tailscale Configuration
 
 ```yaml
 tailscale:
-  name: "my-tail-on-server"  # The hostname that will appear on your tailnet
+  name: "my-tailon-server"  # The hostname that will appear on your tailnet
   state_dir: "/var/lib/tailscale"  # Directory to store Tailscale state
 
 applications:
@@ -49,8 +49,8 @@ For automated deployments or headless servers, you can authenticate using an aut
 # Set your Tailscale authkey as an environment variable
 export TS_AUTHKEY="tskey-auth-your-key-here"
 
-# Start tail-on (it will automatically authenticate on first run)
-tail-on
+# Start tailon (it will automatically authenticate on first run)
+tailon
 ```
 
 #### Running in Ephemeral Mode
@@ -64,12 +64,12 @@ tailscale:
 
 #### Accessing Your Service
 
-Once configured and running, your tail-on service will be available at:
+Once configured and running, your tailon service will be available at:
 
-- `https://my-tail-on-server.your-tailnet.ts.net` (if HTTPS certificates are available)
-- `http://my-tail-on-server.your-tailnet.ts.net` (fallback to HTTP)
+- `https://my-tailon-server.your-tailnet.ts.net` (if HTTPS certificates are available)
+- `http://my-tailon-server.your-tailnet.ts.net` (fallback to HTTP)
 
-**Note**: Replace `my-tail-on-server` with the name you specified in your configuration, and `your-tailnet` with your actual Tailscale tailnet name.
+**Note**: Replace `my-tailon-server` with the name you specified in your configuration, and `your-tailnet` with your actual Tailscale tailnet name.
 
 ## Configuration
 
@@ -86,7 +86,7 @@ applications:
 listen: "localhost:8080"  # Optional: local interface binding
 
 tailscale:
-  name: "my-tail-on-server"  # Hostname on Tailscale network
+  name: "my-tailon-server"  # Hostname on Tailscale network
   state_dir: "/tmp/tailscale-state"  # Tailscale state directory
 ```
 
@@ -94,7 +94,7 @@ tailscale:
 
 Once configured, you can manage your applications through the web interface or API:
 
-- **Web Interface**: Navigate to your tail-on service in a browser to access the modern web UI
+- **Web Interface**: Navigate to your tailon service in a browser to access the modern web UI
 - **RESTful API**: Use HTTP requests to programmatically manage applications
 - **Real-time Logs**: Stream application output in real-time through the web interface or API
 
@@ -109,7 +109,7 @@ The service integrates deeply with Tailscale to provide seamless network access:
 
 #### Access Control with Tailscale ACLs
 
-You can use Tailscale's Access Control Lists (ACLs) to restrict who can access your tail-on service. This provides fine-grained control over which users or devices can manage your applications:
+You can use Tailscale's Access Control Lists (ACLs) to restrict who can access your tailon service. This provides fine-grained control over which users or devices can manage your applications:
 
 ```json
 {
@@ -117,12 +117,12 @@ You can use Tailscale's Access Control Lists (ACLs) to restrict who can access y
     {
       "action": "accept",
       "src": ["group:admins"],
-      "dst": ["my-tail-on-server:80", "my-tail-on-server:443"]
+      "dst": ["my-tailon-server:80", "my-tailon-server:443"]
     },
     {
       "action": "accept", 
       "src": ["user:alice@example.com"],
-      "dst": ["my-tail-on-server:*"]
+      "dst": ["my-tailon-server:*"]
     }
   ],
   "groups": {
@@ -135,7 +135,7 @@ This example configuration:
 
 - Allows members of the `admins` group to access the service on ports 80 and 443
 - Grants `alice@example.com` full access to all ports on the service
-- Blocks all other users from accessing the tail-on service
+- Blocks all other users from accessing the tailon service
 
 For more information on configuring Tailscale ACLs, see the [Tailscale ACL documentation](https://tailscale.com/kb/1018/acls/).
 
@@ -150,7 +150,7 @@ Applications are monitored continuously with comprehensive logging:
 
 ## API Examples
 
-The tail-on service provides a RESTful API for programmatic access to application management:
+The tailon service provides a RESTful API for programmatic access to application management:
 
 ### List all applications
 

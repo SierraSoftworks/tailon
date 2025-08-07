@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sierrasoftworks/tail-on/pkg/config"
-	"github.com/sierrasoftworks/tail-on/pkg/userctx"
+	"github.com/sierrasoftworks/tailon/pkg/config"
+	"github.com/sierrasoftworks/tailon/pkg/userctx"
 	"github.com/sirupsen/logrus"
 )
 

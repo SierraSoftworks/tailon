@@ -42,7 +42,7 @@ class Dashboard {
                     ])
                 ]),
                 Utils.createElement('p', {}, [
-                    'There are no applications configured in your tail-on instance.'
+                    'There are no applications configured in your TailOn instance.'
                 ]),
                 Utils.createElement('p', {}, [
                     'To add applications, update your configuration file and restart the service.'
