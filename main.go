@@ -65,7 +65,17 @@ func runServer(cmd *cobra.Command, args []string) {
 
 	// Validate that at least one server is enabled
 	if !cfg.Tailscale.Enabled && cfg.Listen == "" {
-		logrus.Fatal("At least one server must be enabled (Tailscale or local HTTP)")
+		logrus.Fatal("At least one server must be enabled. Please either:\n" +
+			"  - Enable Tailscale integration by setting 'tailscale.enabled: true' in your config, or\n" +
+			"  - Configure a local HTTP server by setting 'listen: \"localhost:8080\"' (or similar) in your config")
+	}
+
+	// Security warning for non-localhost bindings
+	if cfg.Listen != "" && !isLocalhostBinding(cfg.Listen) {
+		logrus.Warn("WARNING: Your 'listen' address is not bound to localhost. " +
+			"This will allow ANYONE with network access to your machine to control your applications. " +
+			"For security, consider using 'localhost:PORT' or '127.0.0.1:PORT' instead, " +
+			"or rely on Tailscale integration for secure remote access.")
 	}
 
 	// Create application manager
@@ -81,8 +91,9 @@ func runServer(cmd *cobra.Command, args []string) {
 	if cfg.Tailscale.Enabled {
 		// Setup Tailscale server
 		tsServer := &tsnet.Server{
-			Hostname: cfg.Tailscale.Name,
-			Dir:      cfg.Tailscale.StateDir,
+			Hostname:  cfg.Tailscale.Name,
+			Dir:       cfg.Tailscale.StateDir,
+			Ephemeral: cfg.Tailscale.Ephemeral,
 		}
 
 		// Get the LocalClient for user context
@@ -191,4 +202,15 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 
 	logrus.Info("Server stopped")
+}
+
+// isLocalhostBinding checks if the given address is bound to localhost or 127.0.0.1
+func isLocalhostBinding(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		// If we can't parse it, assume it's not safe
+		return false
+	}
+	
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }

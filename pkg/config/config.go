@@ -24,9 +24,10 @@ type ApplicationConfig struct {
 }
 
 type TailscaleConfig struct {
-	Enabled  bool   `json:"enabled" yaml:"enabled"`
-	Name     string `json:"name" yaml:"name"`
-	StateDir string `json:"state_dir" yaml:"state_dir"`
+	Enabled   bool   `json:"enabled" yaml:"enabled"`
+	Name      string `json:"name" yaml:"name"`
+	Ephemeral bool   `json:"ephemeral" yaml:"ephemeral"`
+	StateDir  string `json:"state_dir" yaml:"state_dir"`
 }
 
 func Load(filename string) (*Config, error) {
