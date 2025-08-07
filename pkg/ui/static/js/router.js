@@ -19,9 +19,8 @@ class Router {
     navigate(path) {
         if (path !== this.currentRoute) {
             this.currentRoute = path;
-            // Always use hash-based navigation for consistency
-            const newUrl = path === '/' ? '/' : `/#${path}`;
-            window.history.pushState({}, '', newUrl);
+            // Use HTML5 pushState for clean URLs
+            window.history.pushState({}, '', path);
             this.handleRoute();
         }
     }
@@ -46,18 +45,9 @@ class Router {
 
     // Get current path from URL
     getCurrentPath() {
-        const hash = window.location.hash;
         const pathname = window.location.pathname;
         
-        // Check hash first (for SPA navigation)
-        if (hash.startsWith('#/')) {
-            return hash.substring(1);
-        } else if (hash.startsWith('#')) {
-            // Convert #docs to /docs format
-            return '/' + hash.substring(1);
-        }
-        
-        // Check pathname for direct URL access
+        // Use pathname directly for HTML5 pushState routing
         if (pathname && pathname !== '/') {
             return pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
         }
@@ -72,8 +62,8 @@ class Router {
             
             // Check if this link matches current path
             const href = link.getAttribute('href');
-            if ((currentPath === '/' && href === '#') || 
-                (currentPath !== '/' && (href === `#${currentPath}` || href === `#${currentPath.substring(1)}`))) {
+            if (href === currentPath || 
+                (currentPath === '/' && (href === '#' || href === '/'))) {
                 link.classList.add('active');
             }
         });
@@ -82,12 +72,6 @@ class Router {
     // Start the router
     start() {
         // Handle initial route on page load
-        const initialPath = this.getCurrentPath();
-        if (initialPath !== '/' && window.location.pathname !== '/') {
-            // If we loaded with a specific pathname, convert to hash-based navigation
-            this.navigate(initialPath);
-        } else {
-            this.handleRoute();
-        }
+        this.handleRoute();
     }
 }

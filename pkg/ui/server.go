@@ -29,12 +29,11 @@ func (s *Server) Routes() *mux.Router {
 	// Serve the OpenAPI specification
 	r.HandleFunc("/docs/openapi.yaml", s.HandleOpenAPISpecYAML)
 
-	// Serve the SPA index.html for docs root and main routes
-	r.HandleFunc("/docs/", s.HandleSPA).Methods("GET")
-	r.HandleFunc("/", s.HandleSPA).Methods("GET")
-
 	// Static files
 	r.PathPrefix("/static/").Handler(http.FileServer(http.FS(uiFS)))
+
+	// Catch-all route for SPA - must be last to handle all unmatched routes
+	r.PathPrefix("/").HandlerFunc(s.HandleSPA).Methods("GET")
 
 	// Add middleware
 	r.Use(s.LoggingMiddleware)
