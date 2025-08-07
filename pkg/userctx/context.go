@@ -3,7 +3,10 @@ package userctx
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // User represents a user making requests to the system
@@ -13,9 +16,27 @@ type User struct {
 	LoginName   string `json:"login_name,omitempty"`
 	Node        string `json:"node,omitempty"`
 	IsAnonymous bool   `json:"is_anonymous"`
+	IPAddress   string `json:"ip_address,omitempty"` // Track IP for audit logging
 }
 
-// Anonymous returns the default anonymous user
+// AnonymousFromIP creates an anonymous user with IP-based tracking
+func AnonymousFromIP(remoteAddr string) *User {
+	// Extract IP from address (remove port)
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		// If we can't parse it, use the full address
+		host = remoteAddr
+	}
+
+	return &User{
+		ID:          fmt.Sprintf("$anonymous-%s$", host),
+		DisplayName: fmt.Sprintf("Anonymous (%s)", host),
+		IsAnonymous: true,
+		IPAddress:   host,
+	}
+}
+
+// Anonymous returns the default anonymous user (for backward compatibility)
 func Anonymous() *User {
 	return &User{
 		ID:          "$anonymous$",
@@ -36,6 +57,7 @@ func NewTailscaleUser(userInfo *TailscaleUserInfo) *User {
 		LoginName:   userInfo.LoginName,
 		Node:        userInfo.Node,
 		IsAnonymous: false,
+		IPAddress:   userInfo.IPAddress,
 	}
 }
 
@@ -45,6 +67,7 @@ type TailscaleUserInfo struct {
 	DisplayName string
 	LoginName   string
 	Node        string
+	IPAddress   string
 }
 
 // UserEvent represents an action performed by a user
@@ -54,17 +77,25 @@ type UserEvent struct {
 	Action    string    `json:"action"`
 	Target    string    `json:"target"`
 	Details   string    `json:"details,omitempty"`
+	IPAddress string    `json:"ip_address,omitempty"` // Always track IP for audit
 }
 
 // NewUserEvent creates a new user event
 func NewUserEvent(user *User, action, target, details string) *UserEvent {
-	return &UserEvent{
+	event := &UserEvent{
 		User:      user,
 		Timestamp: time.Now(),
 		Action:    action,
 		Target:    target,
 		Details:   details,
 	}
+
+	// Always include IP address for audit trail
+	if user != nil && user.IPAddress != "" {
+		event.IPAddress = user.IPAddress
+	}
+
+	return event
 }
 
 // String implements the fmt.Stringer interface for better logging
@@ -74,10 +105,16 @@ func (e *UserEvent) String() string {
 		userName = e.User.DisplayName
 	}
 
-	if e.Details != "" {
-		return fmt.Sprintf("%s %s %s (%s) at %s", userName, e.Action, e.Target, e.Details, e.Timestamp.Format("15:04:05"))
+	// Include IP address in audit string
+	ipInfo := ""
+	if e.IPAddress != "" {
+		ipInfo = fmt.Sprintf(" from %s", e.IPAddress)
 	}
-	return fmt.Sprintf("%s %s %s at %s", userName, e.Action, e.Target, e.Timestamp.Format("15:04:05"))
+
+	if e.Details != "" {
+		return fmt.Sprintf("%s %s %s (%s)%s at %s", userName, e.Action, e.Target, e.Details, ipInfo, e.Timestamp.Format("15:04:05"))
+	}
+	return fmt.Sprintf("%s %s %s%s at %s", userName, e.Action, e.Target, ipInfo, e.Timestamp.Format("15:04:05"))
 }
 
 // Key type for context values to avoid collisions
@@ -96,4 +133,18 @@ func FromContext(ctx context.Context) *User {
 		return user
 	}
 	return Anonymous()
+}
+
+// GetLoggerFromContext extracts the enriched logger from context
+func GetLoggerFromContext(ctx context.Context) *logrus.Entry {
+	if logger := ctx.Value("logger"); logger != nil {
+		if entry, ok := logger.(*logrus.Entry); ok {
+			return entry
+		}
+	}
+	// Fallback to default logger with anonymous user
+	return logrus.WithFields(logrus.Fields{
+		"user_id":      "$anonymous$",
+		"is_anonymous": true,
+	})
 }

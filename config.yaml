@@ -24,3 +24,20 @@ tailscale:
   enabled: false
   name: "tailon-server"
   state_dir: "/tmp/tailscale-state"
+
+# Security configuration (NEW!)
+security:
+  # Whether to allow anonymous users when Tailscale is disabled
+  # Set to false for production environments
+  allow_anonymous: true
+  
+  # Restrict anonymous access to specific IP ranges (optional)
+  # Uncomment and configure for additional security
+  # allowed_ips:
+  #   - "127.0.0.1"        # localhost only
+  #   - "192.168.1.0/24"   # local network
+  #   - "10.0.0.0/8"       # private network
+  
+  # Hide environment variables in API responses
+  # Set to true to prevent leaking sensitive environment variables
+  hide_env_vars: false

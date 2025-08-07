@@ -2,6 +2,7 @@ package userctx
 
 import (
 	"context"
+	"net"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -31,7 +32,10 @@ func (m *Middleware) Handler(next http.Handler) http.Handler {
 
 		// Add user information to logger context
 		logger := logrus.WithFields(logrus.Fields{
-			"user_id": user.ID,
+			"user_id":      user.ID,
+			"user_name":    user.DisplayName,
+			"is_anonymous": user.IsAnonymous,
+			"ip_address":   user.IPAddress,
 		})
 
 		// Add logger to context for downstream use
@@ -44,16 +48,23 @@ func (m *Middleware) Handler(next http.Handler) http.Handler {
 
 // extractUser extracts user information from the request
 func (m *Middleware) extractUser(r *http.Request) *User {
-	// If no LocalClient is available, return anonymous user
+	// Extract IP address from request
+	remoteAddr := r.RemoteAddr
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = remoteAddr
+	}
+
+	// If no LocalClient is available, return anonymous user with IP tracking
 	if m.localClient == nil {
-		return Anonymous()
+		return AnonymousFromIP(remoteAddr)
 	}
 
 	// Extract user information from Tailscale
-	whois, err := m.localClient.WhoIs(r.Context(), r.RemoteAddr)
+	whois, err := m.localClient.WhoIs(r.Context(), remoteAddr)
 	if err != nil {
-		logrus.WithError(err).Debug("Failed to get Tailscale user info, using anonymous")
-		return Anonymous()
+		logrus.WithError(err).WithField("remote_addr", remoteAddr).Debug("Failed to get Tailscale user info, using anonymous")
+		return AnonymousFromIP(remoteAddr)
 	}
 
 	// Convert Tailscale user info to our user format
@@ -63,19 +74,9 @@ func (m *Middleware) extractUser(r *http.Request) *User {
 			DisplayName: whois.UserProfile.DisplayName,
 			LoginName:   whois.UserProfile.LoginName,
 			Node:        whois.Node.Name,
+			IPAddress:   host,
 		})
 	}
 
-	return Anonymous()
-}
-
-// GetLoggerFromContext extracts the enriched logger from context
-func GetLoggerFromContext(ctx context.Context) *logrus.Entry {
-	if logger, ok := ctx.Value("logger").(*logrus.Entry); ok {
-		return logger
-	}
-	// Fallback to default logger with anonymous user
-	return logrus.WithFields(logrus.Fields{
-		"user_id": "$anonymous$",
-	})
+	return AnonymousFromIP(remoteAddr)
 }

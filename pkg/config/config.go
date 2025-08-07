@@ -13,6 +13,8 @@ type Config struct {
 	Listen string `json:"listen" yaml:"listen"`
 	// The address on the Tailscale network to listen on for incoming connections
 	Tailscale TailscaleConfig `json:"tailscale" yaml:"tailscale"`
+	// Security configuration
+	Security SecurityConfig `json:"security" yaml:"security"`
 }
 
 type ApplicationConfig struct {
@@ -20,6 +22,7 @@ type ApplicationConfig struct {
 	Path       string   `json:"path" yaml:"path"`
 	Args       []string `json:"args" yaml:"args"`
 	Env        []string `json:"env" yaml:"env"`
+	WorkingDir string   `json:"working_dir" yaml:"working_dir"` // Working directory for the application
 	StopSignal string   `json:"stop_signal" yaml:"stop_signal"` // Signal to use for stopping (default: SIGINT)
 }
 
@@ -28,6 +31,15 @@ type TailscaleConfig struct {
 	Name      string `json:"name" yaml:"name"`
 	Ephemeral bool   `json:"ephemeral" yaml:"ephemeral"`
 	StateDir  string `json:"state_dir" yaml:"state_dir"`
+}
+
+type SecurityConfig struct {
+	// Whether to allow anonymous users when Tailscale is disabled
+	AllowAnonymous bool `json:"allow_anonymous" yaml:"allow_anonymous"`
+	// List of allowed IP addresses/CIDR blocks for anonymous access
+	AllowedIPs []string `json:"allowed_ips" yaml:"allowed_ips"`
+	// Whether to hide environment variables in API responses
+	HideEnvVars bool `json:"hide_env_vars" yaml:"hide_env_vars"`
 }
 
 func Load(filename string) (*Config, error) {

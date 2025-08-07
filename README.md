@@ -90,6 +90,77 @@ tailscale:
   state_dir: "/tmp/tailscale-state"  # Tailscale state directory
 ```
 
+### Working Directory Configuration
+
+Applications can specify a working directory where they will run. This is useful for applications that expect to run from a specific location or need access to files in a particular directory:
+
+```yaml
+applications:
+  - name: "web-server"
+    path: "/usr/bin/python3"
+    args: ["-m", "http.server", "8000"]
+    working_dir: "/var/www/html"  # Serve files from this directory
+    env:
+      - "PYTHONPATH=/app"
+      
+  - name: "file-processor"
+    path: "/usr/bin/python3"
+    args: ["process.py"]
+    working_dir: "/data/input"    # Process files from this directory
+    env:
+      - "DATA_PATH=/data/input"
+```
+
+### Security Configuration
+
+Tailon includes security features to control access and protect sensitive information:
+
+```yaml
+# Security configuration
+security:
+  # Whether to allow anonymous users when Tailscale is disabled
+  allow_anonymous: true
+  
+  # Restrict anonymous access to specific IP ranges
+  allowed_ips:
+    - "127.0.0.1"        # localhost only
+    - "192.168.1.0/24"   # local network
+  
+  # Hide environment variables in API responses
+  hide_env_vars: false
+
+applications:
+  - name: "secure-app"
+    path: "/app/server"
+    env:
+      - "API_KEY=secret123"    # Will be hidden if hide_env_vars: true
+      - "DATABASE_URL=postgres://..."
+```
+
+#### Security Recommendations
+
+**For Production Environments:**
+
+```yaml
+security:
+  allow_anonymous: false    # Require Tailscale authentication
+  hide_env_vars: true      # Hide sensitive environment variables
+
+tailscale:
+  enabled: true            # Use Tailscale for secure access
+```
+
+**For Development/Internal Use:**
+
+```yaml
+listen: "localhost:8080"   # Bind to localhost only
+security:
+  allow_anonymous: true
+  allowed_ips:
+    - "127.0.0.1"          # Only allow localhost access
+  hide_env_vars: false     # Allow viewing env vars for debugging
+```
+
 ### Managing Applications
 
 Once configured, you can manage your applications through the web interface or API:
@@ -148,6 +219,22 @@ Applications are monitored continuously with comprehensive logging:
 - Real-time streaming via Server-Sent Events
 - In-memory storage (logs are not persisted to disk)
 
+### Audit Logging
+
+Tailon provides comprehensive audit logging for security and compliance:
+
+- **User Tracking**: All actions are logged with user identification
+- **IP Address Logging**: Anonymous users are tracked by IP address (`$anonymous-192.168.1.100$`)
+- **Action Logging**: Start, stop, restart operations are recorded with timestamps
+- **Enhanced Context**: Logs include user display names, IP addresses, and detailed action context
+
+Example audit log entries:
+
+```log
+INFO  User started application  action=start target=web-server user_id=$anonymous-127.0.0.1$ ip_address=127.0.0.1
+INFO  Alice Smith stopped application (Gracefully stopping application (SIGTERM)) action=stop target=web-server user_id=alice@company.com
+```
+
 ## API Examples
 
 The tailon service provides a RESTful API for programmatic access to application management:
@@ -201,5 +288,15 @@ you can set the `listen` option in your configuration. We strongly recommend bin
 being able to manage your application remotely.
 
 ```yaml
-listen: "localhost:8080"  # Optional: also bind to local interface
+listen: "localhost:8080"  # Bind to local interface
+
+# Configure security settings for non-Tailscale access
+security:
+  allow_anonymous: true      # Allow access without Tailscale auth
+  allowed_ips:              # Restrict to specific IPs (optional)
+    - "127.0.0.1"           # localhost
+    - "192.168.1.0/24"      # local network
+  hide_env_vars: true       # Hide sensitive environment variables
 ```
+
+**Security Warning**: When binding to non-localhost addresses (e.g., `0.0.0.0:8080`), anyone with network access to your machine can control your applications. Always use appropriate security configuration and consider using Tailscale for secure remote access instead.

@@ -137,6 +137,11 @@ func (m *Manager) StartApp(ctx context.Context, name string) error {
 	cmd := exec.CommandContext(cmdCtx, app.Config.Path, app.Config.Args...)
 	cmd.Env = append(os.Environ(), app.Config.Env...)
 
+	// Set working directory if specified
+	if app.Config.WorkingDir != "" {
+		cmd.Dir = app.Config.WorkingDir
+	}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		cancel()
