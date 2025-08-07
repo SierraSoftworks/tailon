@@ -1,0 +1,18 @@
+applications:
+  - name: "echo-server"
+    path: "/bin/sh"
+    args: ["-c", "while true; do echo 'Hello from echo-server' $(date); sleep 2; done"]
+    env:
+      - "APP_NAME=echo-server"
+  - name: "counter"
+    path: "/bin/sh"
+    args: ["-c", "i=0; while true; do echo 'Counter: '$i; i=$((i+1)); sleep 1; done"]
+    env:
+      - "APP_NAME=counter"
+
+listen: "localhost:8080"
+
+tailscale:
+  enabled: false
+  name: "tail-on-server"
+  state_dir: "/tmp/tailscale-state"

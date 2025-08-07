@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tail-On Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* SPA-specific styles */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: var(--secondary-color);
+        }
+        
+        .error-message {
+            background-color: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            color: var(--danger-color);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="container">
+                <div class="header-content">
+                    <div class="logo">
+                        <img src="https://cdn.sierrasoftworks.com/logos/logo.svg" alt="The Sierra Softworks logo.">
+                        <span class="logo-subtext">tail-on</span>
+                    </div>
+
+                    <nav class="nav">
+                        <a href="#" class="nav-link" onclick="App.router.navigate('/')">Dashboard</a>
+                        <a href="#docs" class="nav-link" onclick="App.router.navigate('/docs')">API Docs</a>
+                    </nav>
+                </div>
+            </div>
+        </header>
+        
+        <main class="main">
+            <div class="container">
+                <div id="content">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2025 Tail-On. Simple application process management.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
+    <!-- Load components and app -->
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/components/ApplicationCard.js"></script>
+    <script src="/static/js/components/ApplicationDetails.js"></script>
+    <script src="/static/js/components/LogViewer.js"></script>
+    <script src="/static/js/components/Dashboard.js"></script>
+    <script src="/static/js/router.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,385 @@
+openapi: 3.0.3
+info:
+  title: tail-on API
+  description: |
+    A web service for managing applications over Tailscale. This API allows you to
+    start, stop, restart, and monitor applications remotely, with real-time log streaming
+    capabilities via Server-Sent Events.
+  version: 1.0.0
+  contact:
+    name: SierraSoftworks
+    url: https://github.com/SierraSoftworks/tail-on
+  license:
+    name: MIT
+    url: https://github.com/SierraSoftworks/tail-on/blob/main/LICENSE
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://{hostname}.tailnet-name.ts.net
+    description: Tailscale network server
+    variables:
+      hostname:
+        default: tail-on-server
+        description: The hostname configured for the tail-on server on your Tailnet
+
+paths:
+  /api/v1/apps:
+    get:
+      summary: List all configured applications
+      description: Returns a list of all applications configured in the system with their current status
+      operationId: getApps
+      tags:
+        - Applications
+      responses:
+        '200':
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/Application'
+              example:
+                echo-server:
+                  config:
+                    name: echo-server
+                    path: /bin/sh
+                    args: ["-c", "while true; do echo 'Hello' $(date); sleep 2; done"]
+                    env: ["APP_NAME=echo-server"]
+                  running: false
+                  pid: 0
+                counter:
+                  config:
+                    name: counter
+                    path: /bin/sh
+                    args: ["-c", "i=0; while true; do echo 'Counter:' $i; i=$((i+1)); sleep 1; done"]
+                    env: ["APP_NAME=counter"]
+                  running: true
+                  pid: 12345
+
+  /api/v1/apps/{app_name}:
+    get:
+      summary: Get application details
+      description: Returns detailed information about a specific application
+      operationId: getApp
+      tags:
+        - Applications
+      parameters:
+        - name: app_name
+          in: path
+          required: true
+          description: Name of the application
+          schema:
+            type: string
+          example: echo-server
+      responses:
+        '200':
+          description: Application details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '404':
+          description: Application not found
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "application echo-server not found"
+
+  /api/v1/apps/{app_name}/start:
+    post:
+      summary: Start an application
+      description: Starts the specified application if it's not already running
+      operationId: startApp
+      tags:
+        - Application Control
+      parameters:
+        - name: app_name
+          in: path
+          required: true
+          description: Name of the application to start
+          schema:
+            type: string
+          example: echo-server
+      responses:
+        '200':
+          description: Application started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+              example:
+                status: started
+        '400':
+          description: Failed to start application (e.g., already running)
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "application echo-server is already running"
+        '404':
+          description: Application not found
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/v1/apps/{app_name}/stop:
+    post:
+      summary: Stop an application
+      description: Stops the specified application if it's currently running
+      operationId: stopApp
+      tags:
+        - Application Control
+      parameters:
+        - name: app_name
+          in: path
+          required: true
+          description: Name of the application to stop
+          schema:
+            type: string
+          example: echo-server
+      responses:
+        '200':
+          description: Application stopped successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+              example:
+                status: stopped
+        '400':
+          description: Failed to stop application (e.g., not running)
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "application echo-server is not running"
+        '404':
+          description: Application not found
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/v1/apps/{app_name}/restart:
+    post:
+      summary: Restart an application
+      description: |
+        Restarts the specified application by stopping it (if running) and then starting it again.
+        This operation will succeed even if the application was not previously running.
+      operationId: restartApp
+      tags:
+        - Application Control
+      parameters:
+        - name: app_name
+          in: path
+          required: true
+          description: Name of the application to restart
+          schema:
+            type: string
+          example: echo-server
+      responses:
+        '200':
+          description: Application restarted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+              example:
+                status: restarted
+        '400':
+          description: Failed to restart application
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Application not found
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/v1/apps/{app_name}/logs:
+    get:
+      summary: Get application logs
+      description: |
+        Returns application logs. The response format depends on the Accept header:
+        - `application/json` (default): Returns logs as JSON array
+        - `text/event-stream`: Streams logs in real-time using Server-Sent Events
+      operationId: getLogs
+      tags:
+        - Logs
+      parameters:
+        - name: app_name
+          in: path
+          required: true
+          description: Name of the application
+          schema:
+            type: string
+          example: echo-server
+        - name: Accept
+          in: header
+          required: false
+          description: Response format preference
+          schema:
+            type: string
+            enum:
+              - application/json
+              - text/event-stream
+            default: application/json
+      responses:
+        '200':
+          description: Application logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LogEntry'
+              example:
+                - timestamp: "2025-08-07T12:00:00Z"
+                  message: "[stdout] Hello Wed Aug  7 12:00:00 UTC 2025"
+                - timestamp: "2025-08-07T12:00:02Z"
+                  message: "[stdout] Hello Wed Aug  7 12:00:02 UTC 2025"
+            text/event-stream:
+              schema:
+                type: string
+                format: text/event-stream
+              example: |
+                data: {"timestamp":"2025-08-07T12:00:00Z","message":"[stdout] Hello Wed Aug  7 12:00:00 UTC 2025"}
+                data: {"timestamp":"2025-08-07T12:00:02Z","message":"[stdout] Hello Wed Aug  7 12:00:02 UTC 2025"}
+        '404':
+          description: Application not found
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    Application:
+      type: object
+      required:
+        - config
+        - running
+      properties:
+        config:
+          $ref: '#/components/schemas/ApplicationConfig'
+        running:
+          type: boolean
+          description: Whether the application is currently running
+          example: true
+        pid:
+          type: integer
+          description: Process ID of the running application (0 if not running)
+          example: 12345
+
+    ApplicationConfig:
+      type: object
+      required:
+        - name
+        - path
+        - args
+        - env
+      properties:
+        name:
+          type: string
+          description: Unique name of the application
+          example: echo-server
+        path:
+          type: string
+          description: Path to the executable
+          example: /bin/sh
+        args:
+          type: array
+          items:
+            type: string
+          description: Command line arguments
+          example: ["-c", "echo 'Hello World'"]
+        env:
+          type: array
+          items:
+            type: string
+          description: Environment variables in KEY=VALUE format
+          example: ["APP_NAME=echo-server", "DEBUG=true"]
+
+    LogEntry:
+      type: object
+      required:
+        - timestamp
+        - message
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the log entry was created
+          example: "2025-08-07T12:00:00Z"
+        message:
+          type: string
+          description: Log message including source (stdout/stderr) prefix
+          example: "[stdout] Hello World"
+
+    StatusResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: Operation status
+          enum:
+            - started
+            - stopped
+            - restarted
+          example: started
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error description
+          example: "application not found"
+
+  responses:
+    NotFound:
+      description: Application not found
+      content:
+        text/plain:
+          schema:
+            type: string
+          example: "application echo-server not found"
+
+    BadRequest:
+      description: Invalid request or operation failed
+      content:
+        text/plain:
+          schema:
+            type: string
+          example: "application echo-server is already running"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+          example: "Internal server error"
+
+tags:
+  - name: Applications
+    description: Operations for listing and viewing application information
+  - name: Application Control
+    description: Operations for controlling application lifecycle (start/stop/restart)
+  - name: Logs
+    description: Operations for accessing application logs
+
+externalDocs:
+  description: GitHub Repository
+  url: https://github.com/SierraSoftworks/tail-on
