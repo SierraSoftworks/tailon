@@ -58,8 +58,6 @@ class Docs {
     // Create Swagger UI header
     createSwaggerHeader() {
         const header = Utils.createElement('div', { className: 'swagger-header' }, [
-            Utils.createElement('h1', {}, ['tail-on API Documentation']),
-            Utils.createElement('p', {}, ['Interactive API Explorer powered by Swagger UI']),
             this.createNavigation()
         ]);
 

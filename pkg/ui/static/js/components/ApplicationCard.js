@@ -9,6 +9,7 @@ class ApplicationCard {
         this.element = null;
         this.confirmationStates = new Map(); // Track button confirmation states by action
         this.confirmationTimeouts = new Map(); // Track confirmation timeouts by action
+        this.runtimeUpdateTimer = null; // Timer for updating runtime display
     }
 
     // Create the application card DOM structure
@@ -20,22 +21,62 @@ class ApplicationCard {
             dataset: { app: this.appName }
         }, [header]);
 
+        // Start the runtime update timer
+        this.startRuntimeTimer();
+
         return this.element;
+    }
+
+    // Start timer to update runtime display every second
+    startRuntimeTimer() {
+        // Clear any existing timer
+        this.stopRuntimeTimer();
+        
+        // Only start timer if app has a state change time
+        if (this.app.state_changed_at) {
+            this.runtimeUpdateTimer = setInterval(() => {
+                this.updateRuntimeDisplay();
+            }, 1000);
+        }
+    }
+
+    // Stop the runtime update timer
+    stopRuntimeTimer() {
+        if (this.runtimeUpdateTimer) {
+            clearInterval(this.runtimeUpdateTimer);
+            this.runtimeUpdateTimer = null;
+        }
+    }
+
+    // Update just the runtime display without full re-render
+    updateRuntimeDisplay() {
+        if (!this.element || !this.app.state_changed_at) return;
+        
+        const runtimeInfoElement = this.element.querySelector('.app-runtime-info');
+        if (runtimeInfoElement) {
+            const newRuntimeInfo = this.renderRuntimeInfo();
+            runtimeInfoElement.parentNode.replaceChild(newRuntimeInfo, runtimeInfoElement);
+        }
     }
 
     // Render the card header
     renderHeader() {
-        const nameSection = Utils.createElement('div', { className: 'app-name-section' }, [
+        const nameAndStatusRow = Utils.createElement('div', { className: 'app-name-status-row' }, [
             Utils.createElement('h2', { className: 'app-name' }, [this.appName]),
             this.renderStatus()
         ]);
 
         const runtimeInfo = this.renderRuntimeInfo();
+        
+        const leftColumn = Utils.createElement('div', { className: 'app-info-column' }, [
+            nameAndStatusRow,
+            runtimeInfo
+        ]);
+
         const controls = this.renderControls();
 
         const headerContent = Utils.createElement('div', { className: 'app-header-content' }, [
-            nameSection,
-            runtimeInfo,
+            leftColumn,
             controls
         ]);
 
@@ -72,10 +113,12 @@ class ApplicationCard {
         }
         
         const pidText = this.app.state === 'running' && this.app.pid ? ` (PID: ${this.app.pid})` : '';
+        const exitCodeText = this.app.state === 'not_running' && this.app.last_exit_code !== undefined && this.app.last_exit_code !== 0 
+            ? ` (${this.app.last_exit_code})` : '';
 
         return Utils.createElement('div', { className: `app-status ${statusClass}` }, [
             Utils.createElement('span', { className: `status-dot ${statusClass}` }),
-            statusText + pidText
+            statusText + pidText + exitCodeText
         ]);
     }
 
@@ -110,11 +153,6 @@ class ApplicationCard {
             }
         }
 
-        // Show exit code if the application is stopped and exit code is non-zero
-        if (this.app.state === 'not_running' && this.app.last_exit_code && this.app.last_exit_code !== 0) {
-            info.push(`Exit code: ${this.app.last_exit_code}`);
-        }
-
         // If no information is available, show a placeholder
         if (info.length === 0) {
             if (this.app.state === 'not_running') {
@@ -125,12 +163,19 @@ class ApplicationCard {
         }
 
         return Utils.createElement('div', { className: 'app-runtime-info' }, [
-            Utils.createElement('div', { className: 'runtime-text' }, info.map(text => {
-                const isExitCode = text.startsWith('Exit code:');
-                return Utils.createElement('span', { 
-                    className: isExitCode ? 'runtime-item exit-code-error' : 'runtime-item' 
-                }, [text]);
-            }))
+            Utils.createElement('div', { className: 'runtime-text' }, [
+                Utils.createElement('span', { className: 'runtime-line' }, 
+                    info.map((text, index) => {
+                        const separator = index > 0 ? ' • ' : '';
+                        return [
+                            separator,
+                            Utils.createElement('span', { 
+                                className: 'runtime-item' 
+                            }, [text])
+                        ];
+                    }).flat().filter(item => item !== '') // Remove empty separators
+                )
+            ])
         ]);
     }
 
@@ -439,6 +484,9 @@ class ApplicationCard {
         const newHeader = this.renderHeader();
         const oldHeader = this.element.querySelector('.app-accordion-header');
         this.element.replaceChild(newHeader, oldHeader);
+        
+        // Restart the runtime timer with new app data
+        this.startRuntimeTimer();
     }
 
     // Cleanup when component is destroyed
@@ -449,6 +497,9 @@ class ApplicationCard {
         }
         this.confirmationTimeouts.clear();
         this.confirmationStates.clear();
+        
+        // Stop the runtime update timer
+        this.stopRuntimeTimer();
         
         if (this.details) {
             this.details.destroy();

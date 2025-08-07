@@ -167,7 +167,7 @@ body {
     background: white;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
-    overflow: hidden;
+    overflow: visible; /* Allow tooltips to show outside card bounds */
     transition: all 0.3s ease;
 }
 
@@ -178,6 +178,7 @@ body {
 .app-accordion-header {
     padding: 1.5rem;
     cursor: pointer;
+    border-radius: var(--border-radius);
     border-bottom: 1px solid transparent;
     transition: all 0.2s ease;
 }
@@ -411,11 +412,87 @@ body {
     box-shadow: var(--shadow-lg);
 }
 
+/* Application Card Header */
 .app-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.app-header-content {
     display: flex;
+    flex-direction: row;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1rem;
+}
+
+.app-info-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.app-name-status-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+}
+
+.app-name {
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.app-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.app-status.stopped {
+    background-color: var(--light-gray);
+    color: var(--text-color);
+}
+
+.app-status.stopped.error-exit {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.app-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Runtime Info Styling */
+.app-runtime-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.runtime-text {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.runtime-line {
+    display: flex;
+    align-items: center;
+}
+
+.runtime-item {
+    margin: 0;
+}
+
+.exit-code-error {
+    color: var(--danger-color);
+    font-weight: 500;
 }
 
 .app-name {
@@ -639,6 +716,7 @@ body {
     opacity: 0;
     animation: tooltipFadeIn 0.2s ease-out forwards;
     pointer-events: none;
+    z-index: 1000; /* Ensure tooltips appear above all other elements */
 }
 
 .btn[data-tooltip]:hover::before {
@@ -653,6 +731,7 @@ body {
     opacity: 0;
     animation: tooltipFadeIn 0.2s ease-out forwards;
     pointer-events: none;
+    z-index: 1000; /* Ensure tooltip arrows appear above all other elements */
 }
 
 /* Ensure button group buttons can show tooltips */
@@ -680,12 +759,12 @@ body {
 
 .alert-success {
     background-color: rgb(5, 150, 105);
-    color: var(--success-color);
+    color: white;
 }
 
 .alert-error {
     background-color: rgb(220, 38, 38);
-    color: var(--danger-color);
+    color: white;
 }
 
 /* Logs */
