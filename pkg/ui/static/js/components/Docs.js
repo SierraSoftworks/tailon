@@ -47,7 +47,7 @@ class Docs {
     createHeader() {
         const header = Utils.createElement('div', { className: 'docs-header' }, [
             Utils.createElement('h1', {}, ['TailOn Documentation']),
-            Utils.createElement('p', { className: 'lead' }, [
+            Utils.createElement('p', { }, [
                 'TailOn is a web-based application manager that runs on your Tailscale network, allowing you to start, stop, and monitor configured applications from anywhere on your tailnet.'
             ])
         ]);

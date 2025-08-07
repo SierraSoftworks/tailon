@@ -20,24 +20,12 @@ class DocsAPI {
         const content = document.getElementById('content');
         content.innerHTML = '';
 
-        // Page title
-        const title = Utils.createElement('div', { className: 'page-title' }, [
-            'API Documentation'
-        ]);
-
         // Create docs container
         this.container = Utils.createElement('div', { className: 'docs-container' });
+        this.container.appendChild(this.createHeader());
 
-        // Create Swagger UI header
-        const header = this.createSwaggerHeader();
-        
-        // Create Swagger UI container
-        const swaggerContainer = Utils.createElement('div', { id: 'swagger-ui' });
+        this.container.appendChild(Utils.createElement('div', { id: 'swagger-ui' }));
 
-        this.container.appendChild(header);
-        this.container.appendChild(swaggerContainer);
-
-        content.appendChild(title);
         content.appendChild(this.container);
 
         // Load Swagger UI
@@ -49,15 +37,7 @@ class DocsAPI {
         const header = Utils.createElement('div', { className: 'docs-header' }, [
             Utils.createElement('h1', {}, ['TailOn API']),
             Utils.createElement('p', {}, ['A web service for managing applications over Tailscale']),
-            Utils.createElement('div', { className: 'base-url' }, [`Base URL: ${this.baseURL}`])
-        ]);
-
-        return header;
-    }
-
-    // Create Swagger UI header
-    createSwaggerHeader() {
-        const header = Utils.createElement('div', { className: 'swagger-header' }, [
+            Utils.createElement('div', { className: 'base-url' }, [`Base URL: ${this.baseURL}`]),
             this.createNavigation()
         ]);
 
@@ -185,8 +165,7 @@ class DocsAPI {
 
         const links = [
             { label: 'OpenAPI Spec', href: '/docs/openapi.yaml' },
-            { label: 'GitHub Repository', href: 'https://github.com/SierraSoftworks/tailon' },
-            { label: 'Tailscale', href: 'https://tailscale.com/' }
+            { label: 'GitHub Repository', href: 'https://github.com/SierraSoftworks/tailon' }
         ];
 
         links.forEach(link => {
