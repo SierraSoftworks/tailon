@@ -24,6 +24,38 @@ servers:
         description: The hostname configured for the tail-on server on your Tailnet
 
 paths:
+  /api/v1/whoami:
+    get:
+      summary: Get current user information
+      description: Returns information about the currently authenticated user
+      operationId: whoami
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                anonymous:
+                  summary: Anonymous user
+                  value:
+                    id: anonymous
+                    display_name: Anonymous
+                    login_name: ""
+                    node: ""
+                    is_anonymous: true
+                tailscale_user:
+                  summary: Tailscale authenticated user
+                  value:
+                    id: user123
+                    display_name: John Doe
+                    login_name: john@example.com
+                    node: johns-laptop
+                    is_anonymous: false
+
   /api/v1/apps:
     get:
       summary: List all configured applications
@@ -261,6 +293,34 @@ paths:
 
 components:
   schemas:
+    User:
+      type: object
+      required:
+        - id
+        - display_name
+        - is_anonymous
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the user
+          example: user123
+        display_name:
+          type: string
+          description: Human-readable name for the user
+          example: John Doe
+        login_name:
+          type: string
+          description: User's login name or email (empty for anonymous users)
+          example: john@example.com
+        node:
+          type: string
+          description: Tailscale node name (empty for anonymous users)
+          example: johns-laptop
+        is_anonymous:
+          type: boolean
+          description: Whether this is an anonymous user
+          example: false
+
     Application:
       type: object
       required:

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -44,7 +45,7 @@ func TestHandleStopApp(t *testing.T) {
 	server, manager := SetupTestServer()
 
 	// First start the app
-	err := manager.StartApp("test-app")
+	err := manager.StartApp(context.Background(), "test-app")
 	require.NoError(t, err)
 
 	// Test stopping the app
@@ -118,7 +119,7 @@ func TestHandleRestartApp(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, recorder.Code)
 
 	// Clean up - stop the app
-	manager.StopApp("test-app")
+	manager.StopApp(context.Background(), "test-app")
 }
 
 func TestHandleStopAppWithForce(t *testing.T) {
@@ -126,7 +127,7 @@ func TestHandleStopAppWithForce(t *testing.T) {
 
 	// Test normal stop
 	// First start the app
-	err := manager.StartApp("test-app")
+	err := manager.StartApp(context.Background(), "test-app")
 	require.NoError(t, err)
 
 	req := httptest.NewRequest("POST", "/api/v1/apps/test-app/stop", nil)
@@ -144,8 +145,8 @@ func TestHandleStopAppWithForce(t *testing.T) {
 	// Wait for app to stop completely
 	time.Sleep(100 * time.Millisecond)
 
-	// Start the app again for force stop test  
-	err = manager.StartApp("test-app")
+	// Start the app again for force stop test
+	err = manager.StartApp(context.Background(), "test-app")
 	require.NoError(t, err)
 
 	// Test force stop

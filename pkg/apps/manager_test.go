@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -70,12 +71,12 @@ func TestManagerStartStopApp(t *testing.T) {
 	manager := NewManager(configs)
 
 	// Test starting non-existent app
-	err := manager.StartApp("non-existent")
+	err := manager.StartApp(context.Background(), "non-existent")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 
 	// Test starting app
-	err = manager.StartApp("test-echo")
+	err = manager.StartApp(context.Background(), "test-echo")
 	assert.NoError(t, err)
 
 	// Verify app is running
@@ -86,12 +87,12 @@ func TestManagerStartStopApp(t *testing.T) {
 	assert.Greater(t, app.PID, 0)
 
 	// Test starting already running app
-	err = manager.StartApp("test-echo")
+	err = manager.StartApp(context.Background(), "test-echo")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "already running")
 
 	// Test stopping app
-	err = manager.StopApp("test-echo")
+	err = manager.StopApp(context.Background(), "test-echo")
 	assert.NoError(t, err)
 
 	// Wait a bit for the process to stop
@@ -105,12 +106,12 @@ func TestManagerStartStopApp(t *testing.T) {
 	assert.Equal(t, 0, app.PID)
 
 	// Test stopping non-existent app
-	err = manager.StopApp("non-existent")
+	err = manager.StopApp(context.Background(), "non-existent")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 
 	// Test stopping already stopped app
-	err = manager.StopApp("test-echo")
+	err = manager.StopApp(context.Background(), "test-echo")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not running")
 }
@@ -132,7 +133,7 @@ func TestManagerGetLogs(t *testing.T) {
 	assert.Nil(t, logs)
 
 	// Start app and wait for logs
-	err = manager.StartApp("test-logger")
+	err = manager.StartApp(context.Background(), "test-logger")
 	require.NoError(t, err)
 
 	// Wait for logs to be collected
@@ -151,7 +152,7 @@ func TestManagerGetLogs(t *testing.T) {
 	}
 
 	// Stop the app
-	manager.StopApp("test-logger")
+	manager.StopApp(context.Background(), "test-logger")
 }
 
 func TestLogCircularBuffer(t *testing.T) {
@@ -165,7 +166,7 @@ func TestLogCircularBuffer(t *testing.T) {
 	}
 
 	manager := NewManager(configs)
-	err := manager.StartApp("log-generator")
+	err := manager.StartApp(context.Background(), "log-generator")
 	require.NoError(t, err)
 
 	// Wait for all logs to be generated
@@ -178,7 +179,7 @@ func TestLogCircularBuffer(t *testing.T) {
 	assert.LessOrEqual(t, len(logs), maxLogLines)
 
 	// Stop the app
-	manager.StopApp("log-generator")
+	manager.StopApp(context.Background(), "log-generator")
 }
 
 func TestManagerForceStopApp(t *testing.T) {
@@ -193,12 +194,12 @@ func TestManagerForceStopApp(t *testing.T) {
 	manager := NewManager(configs)
 
 	// Test force stopping non-existent app
-	err := manager.ForceStopApp("non-existent")
+	err := manager.ForceStopApp(context.Background(), "non-existent")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 
 	// Start app
-	err = manager.StartApp("long-running")
+	err = manager.StartApp(context.Background(), "long-running")
 	assert.NoError(t, err)
 
 	// Verify app is running
@@ -207,7 +208,7 @@ func TestManagerForceStopApp(t *testing.T) {
 	assert.Equal(t, StateRunning, app.State)
 
 	// Force stop the app
-	err = manager.ForceStopApp("long-running")
+	err = manager.ForceStopApp(context.Background(), "long-running")
 	assert.NoError(t, err)
 
 	// Wait for process to be killed
@@ -220,7 +221,7 @@ func TestManagerForceStopApp(t *testing.T) {
 	assert.Equal(t, 0, app.PID)
 
 	// Test force stopping already stopped app
-	err = manager.ForceStopApp("long-running")
+	err = manager.ForceStopApp(context.Background(), "long-running")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not running")
 }
@@ -244,15 +245,15 @@ func TestManagerStopSignalConfiguration(t *testing.T) {
 	manager := NewManager(configs)
 
 	// Start both apps
-	err := manager.StartApp("sigterm-app")
+	err := manager.StartApp(context.Background(), "sigterm-app")
 	assert.NoError(t, err)
-	err = manager.StartApp("sigint-app")
+	err = manager.StartApp(context.Background(), "sigint-app")
 	assert.NoError(t, err)
 
 	// Stop both apps (should use their configured signals)
-	err = manager.StopApp("sigterm-app")
+	err = manager.StopApp(context.Background(), "sigterm-app")
 	assert.NoError(t, err)
-	err = manager.StopApp("sigint-app")
+	err = manager.StopApp(context.Background(), "sigint-app")
 	assert.NoError(t, err)
 
 	// Wait for processes to handle signals
@@ -310,7 +311,7 @@ func TestApplicationStates(t *testing.T) {
 	assert.False(t, app.IsRunning())
 
 	// Start app - should be running
-	err = manager.StartApp("state-test")
+	err = manager.StartApp(context.Background(), "state-test")
 	assert.NoError(t, err)
 
 	app, err = manager.GetApp("state-test")
@@ -319,7 +320,7 @@ func TestApplicationStates(t *testing.T) {
 	assert.True(t, app.IsRunning())
 
 	// Stop app - should transition to stopping then not running
-	err = manager.StopApp("state-test")
+	err = manager.StopApp(context.Background(), "state-test")
 	assert.NoError(t, err)
 
 	// Wait for process to exit

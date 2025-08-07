@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sierrasoftworks/tail-on/pkg/config"
+	"github.com/sierrasoftworks/tail-on/pkg/userctx"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,13 +33,15 @@ type LogLine struct {
 }
 
 type Application struct {
-	Config config.ApplicationConfig `json:"config"`
-	State  ApplicationState         `json:"state"`
-	PID    int                      `json:"pid,omitempty"`
-	logs   []LogLine
-	logMux sync.RWMutex
-	cmd    *exec.Cmd
-	cancel context.CancelFunc
+	Config    config.ApplicationConfig `json:"config"`
+	State     ApplicationState         `json:"state"`
+	PID       int                      `json:"pid,omitempty"`
+	StartedBy *userctx.User            `json:"started_by,omitempty"`
+	StartedAt *time.Time               `json:"started_at,omitempty"`
+	logs      []LogLine
+	logMux    sync.RWMutex
+	cmd       *exec.Cmd
+	cancel    context.CancelFunc
 }
 
 // IsRunning returns true if the application is currently running
@@ -73,9 +76,11 @@ func (m *Manager) GetApps() map[string]*Application {
 	result := make(map[string]*Application)
 	for name, app := range m.apps {
 		result[name] = &Application{
-			Config: app.Config,
-			State:  app.State,
-			PID:    app.PID,
+			Config:    app.Config,
+			State:     app.State,
+			PID:       app.PID,
+			StartedBy: app.StartedBy,
+			StartedAt: app.StartedAt,
 		}
 	}
 	return result
@@ -91,13 +96,15 @@ func (m *Manager) GetApp(name string) (*Application, error) {
 	}
 
 	return &Application{
-		Config: app.Config,
-		State:  app.State,
-		PID:    app.PID,
+		Config:    app.Config,
+		State:     app.State,
+		PID:       app.PID,
+		StartedBy: app.StartedBy,
+		StartedAt: app.StartedAt,
 	}, nil
 }
 
-func (m *Manager) StartApp(name string) error {
+func (m *Manager) StartApp(ctx context.Context, name string) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -110,8 +117,20 @@ func (m *Manager) StartApp(name string) error {
 		return fmt.Errorf("application %s is already running", name)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, app.Config.Path, app.Config.Args...)
+	// Get user from context
+	user := userctx.FromContext(ctx)
+	logger := userctx.GetLoggerFromContext(ctx)
+
+	// Log the start event
+	event := userctx.NewUserEvent(user, "start", name, "")
+	logger.WithFields(logrus.Fields{
+		"action": event.Action,
+		"target": event.Target,
+		"event":  event,
+	}).Info("User started application")
+
+	cmdCtx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(cmdCtx, app.Config.Path, app.Config.Args...)
 	cmd.Env = append(os.Environ(), app.Config.Env...)
 
 	stdout, err := cmd.StdoutPipe()
@@ -131,10 +150,14 @@ func (m *Manager) StartApp(name string) error {
 		return fmt.Errorf("failed to start application: %w", err)
 	}
 
+	// Update application state and user tracking
+	now := time.Now()
 	app.cmd = cmd
 	app.cancel = cancel
 	app.State = StateRunning
 	app.PID = cmd.Process.Pid
+	app.StartedBy = user
+	app.StartedAt = &now
 
 	// Start log collection
 	go m.collectLogs(name, stdout, "stdout")
@@ -143,7 +166,7 @@ func (m *Manager) StartApp(name string) error {
 	// Monitor process
 	go func() {
 		if err := cmd.Wait(); err != nil {
-			logrus.WithField("app", name).WithError(err).Warn("Application exited with error")
+			logger.WithField("app", name).WithError(err).Warn("Application exited with error")
 		}
 
 		m.mux.Lock()
@@ -151,24 +174,26 @@ func (m *Manager) StartApp(name string) error {
 		app.PID = 0
 		app.cmd = nil
 		app.cancel = nil
+		app.StartedBy = nil
+		app.StartedAt = nil
 		m.mux.Unlock()
 
-		logrus.WithField("app", name).Info("Application stopped")
+		logger.WithField("app", name).Info("Application stopped")
 	}()
 
-	logrus.WithField("app", name).WithField("pid", app.PID).Info("Application started")
+	logger.WithField("app", name).WithField("pid", app.PID).Info("Application started")
 	return nil
 }
 
-func (m *Manager) StopApp(name string) error {
-	return m.stopApp(name, false)
+func (m *Manager) StopApp(ctx context.Context, name string) error {
+	return m.stopApp(ctx, name, false)
 }
 
-func (m *Manager) ForceStopApp(name string) error {
-	return m.stopApp(name, true)
+func (m *Manager) ForceStopApp(ctx context.Context, name string) error {
+	return m.stopApp(ctx, name, true)
 }
 
-func (m *Manager) stopApp(name string, force bool) error {
+func (m *Manager) stopApp(ctx context.Context, name string, force bool) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -181,6 +206,32 @@ func (m *Manager) stopApp(name string, force bool) error {
 		return fmt.Errorf("application %s is not running", name)
 	}
 
+	// Get user from context
+	user := userctx.FromContext(ctx)
+	logger := userctx.GetLoggerFromContext(ctx)
+
+	// Log the stop event
+	action := "stop"
+	details := ""
+	if force {
+		action = "force_stop"
+		details = "Using SIGKILL"
+	} else {
+		signal := app.Config.StopSignal
+		if signal == "" {
+			signal = "SIGINT"
+		}
+		details = fmt.Sprintf("Using %s", signal)
+	}
+
+	event := userctx.NewUserEvent(user, action, name, details)
+	logger.WithFields(logrus.Fields{
+		"action":  event.Action,
+		"target":  event.Target,
+		"details": event.Details,
+		"event":   event,
+	}).Info("User stopped application")
+
 	// Set state to stopping
 	app.State = StateStopping
 
@@ -188,7 +239,7 @@ func (m *Manager) stopApp(name string, force bool) error {
 		// Force stop with SIGKILL
 		if app.cmd != nil && app.cmd.Process != nil {
 			if err := app.cmd.Process.Kill(); err != nil {
-				logrus.WithField("app", name).WithError(err).Warn("Failed to force kill application")
+				logger.WithField("app", name).WithError(err).Warn("Failed to force kill application")
 			}
 		}
 	} else {
@@ -196,7 +247,7 @@ func (m *Manager) stopApp(name string, force bool) error {
 		if app.cmd != nil && app.cmd.Process != nil {
 			sig := m.parseStopSignal(app.Config.StopSignal)
 			if err := app.cmd.Process.Signal(sig); err != nil {
-				logrus.WithField("app", name).WithError(err).Warn("Failed to signal application")
+				logger.WithField("app", name).WithError(err).Warn("Failed to signal application")
 			}
 		}
 	}

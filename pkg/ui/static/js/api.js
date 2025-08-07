@@ -37,6 +37,11 @@ const API = {
         }
     },
 
+    // Get current user information
+    async getCurrentUser() {
+        return await this.request('/api/v1/whoami');
+    },
+
     // Get all applications
     async getApplications() {
         return await this.request('/api/v1/apps');

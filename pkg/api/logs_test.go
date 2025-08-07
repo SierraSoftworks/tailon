@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -16,7 +17,7 @@ func TestHandleLogs(t *testing.T) {
 	server, manager := SetupTestServer()
 
 	// Start the logger app and wait for logs
-	err := manager.StartApp("test-logger")
+	err := manager.StartApp(context.Background(), "test-logger")
 	require.NoError(t, err)
 	time.Sleep(200 * time.Millisecond)
 
@@ -45,14 +46,14 @@ func TestHandleLogs(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, recorder.Code)
 
 	// Stop the app
-	manager.StopApp("test-logger")
+	manager.StopApp(context.Background(), "test-logger")
 }
 
 func TestHandleLogsSSERouting(t *testing.T) {
 	server, manager := SetupTestServer()
 
 	// Start the logger app
-	err := manager.StartApp("test-logger")
+	err := manager.StartApp(context.Background(), "test-logger")
 	require.NoError(t, err)
 	time.Sleep(200 * time.Millisecond)
 
@@ -72,5 +73,5 @@ func TestHandleLogsSSERouting(t *testing.T) {
 	assert.NotEmpty(t, logs)
 
 	// Stop the app
-	manager.StopApp("test-logger")
+	manager.StopApp(context.Background(), "test-logger")
 }

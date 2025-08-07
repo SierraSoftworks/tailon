@@ -69,14 +69,9 @@ func runServer(cmd *cobra.Command, args []string) {
 	appManager := apps.NewManager(cfg.Applications)
 
 	// Create servers
-	apiServer := api.NewServer(appManager)
-	uiServer := ui.NewServer(appManager)
-
-	// Create main router and mount sub-routers
-	mainRouter := mux.NewRouter()
-	mainRouter.PathPrefix("/api/").Handler(apiServer.Routes())
-	mainRouter.PathPrefix("/docs/").Handler(apiServer.Routes())
-	mainRouter.PathPrefix("/").Handler(uiServer.Routes())
+	var apiServer *api.Server
+	var uiServer *ui.Server
+	var mainRouter *mux.Router
 
 	// Start Tailscale server if enabled
 	var tailscaleServer *http.Server
@@ -86,6 +81,22 @@ func runServer(cmd *cobra.Command, args []string) {
 			Hostname: cfg.Tailscale.Name,
 			Dir:      cfg.Tailscale.StateDir,
 		}
+
+		// Get the LocalClient for user context
+		localClient, err := tsServer.LocalClient()
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to get Tailscale LocalClient")
+		}
+
+		// Create servers with Tailscale LocalClient for user context
+		apiServer = api.NewServerWithTailscale(appManager, localClient)
+		uiServer = ui.NewServer(appManager)
+
+		// Create main router and mount sub-routers
+		mainRouter = mux.NewRouter()
+		mainRouter.PathPrefix("/api/").Handler(apiServer.Routes())
+		mainRouter.PathPrefix("/docs/").Handler(apiServer.Routes())
+		mainRouter.PathPrefix("/").Handler(uiServer.Routes())
 
 		// Create HTTP server for Tailscale
 		tailscaleServer = &http.Server{
@@ -119,6 +130,16 @@ func runServer(cmd *cobra.Command, args []string) {
 		}()
 	} else {
 		logrus.Info("Tailscale integration disabled")
+
+		// Create servers without Tailscale (anonymous users only)
+		apiServer = api.NewServer(appManager)
+		uiServer = ui.NewServer(appManager)
+
+		// Create main router and mount sub-routers
+		mainRouter = mux.NewRouter()
+		mainRouter.PathPrefix("/api/").Handler(apiServer.Routes())
+		mainRouter.PathPrefix("/docs/").Handler(apiServer.Routes())
+		mainRouter.PathPrefix("/").Handler(uiServer.Routes())
 	}
 
 	// Also listen on local interface if configured

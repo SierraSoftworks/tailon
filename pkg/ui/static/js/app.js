@@ -16,6 +16,9 @@ class TailOnApp {
             // Initialize API
             API.init();
 
+            // Load user information
+            await this.loadUserInfo();
+
             // Register routes
             this.setupRoutes();
 
@@ -83,6 +86,43 @@ class TailOnApp {
         ]);
 
         content.appendChild(container);
+    }
+
+    // Load and display user information
+    async loadUserInfo() {
+        try {
+            const user = await API.getCurrentUser();
+            this.displayUserInfo(user);
+        } catch (error) {
+            console.error('Failed to load user info:', error);
+            // Still display anonymous user info as fallback
+            this.displayUserInfo({
+                id: 'anonymous',
+                display_name: 'Anonymous',
+                is_anonymous: true
+            });
+        }
+    }
+
+    // Display user information in the header
+    displayUserInfo(user) {
+        const userInfoElement = document.getElementById('user-info');
+        if (!userInfoElement) {
+            return;
+        }
+
+        const statusClass = user.is_anonymous ? 'anonymous' : 'authenticated';
+        const displayName = user.display_name || 'Unknown User';
+        
+        userInfoElement.innerHTML = `
+            <span class="user-status ${statusClass}"></span>
+            <span class="user-name">${displayName}</span>
+        `;
+
+        // Add tooltip with full user info if not anonymous
+        if (!user.is_anonymous && user.login_name) {
+            userInfoElement.title = `${user.login_name}${user.node ? ` (${user.node})` : ''}`;
+        }
     }
 
     // Auto-refresh dashboard every 30 seconds

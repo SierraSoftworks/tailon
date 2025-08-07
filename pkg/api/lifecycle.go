@@ -14,7 +14,7 @@ func (s *Server) HandleStartApp(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	appName := vars["app_name"]
 
-	if err := s.manager.StartApp(appName); err != nil {
+	if err := s.manager.StartApp(r.Context(), appName); err != nil {
 		logrus.WithError(err).WithField("app", appName).Error("Failed to start application")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -34,9 +34,9 @@ func (s *Server) HandleStopApp(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	if force {
-		err = s.manager.ForceStopApp(appName)
+		err = s.manager.ForceStopApp(r.Context(), appName)
 	} else {
-		err = s.manager.StopApp(appName)
+		err = s.manager.StopApp(r.Context(), appName)
 	}
 
 	if err != nil {
@@ -68,7 +68,7 @@ func (s *Server) HandleRestartApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try to stop the app if it's running (ignore errors if already stopped)
-	if err := s.manager.StopApp(appName); err != nil {
+	if err := s.manager.StopApp(r.Context(), appName); err != nil {
 		logrus.WithField("app", appName).Debug("App was not running during restart")
 	}
 
@@ -76,7 +76,7 @@ func (s *Server) HandleRestartApp(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Start the app
-	if err := s.manager.StartApp(appName); err != nil {
+	if err := s.manager.StartApp(r.Context(), appName); err != nil {
 		logrus.WithError(err).WithField("app", appName).Error("Failed to start application during restart")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
