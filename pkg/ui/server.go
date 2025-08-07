@@ -82,7 +82,7 @@ func (s *Server) LoggingMiddleware(next http.Handler) http.Handler {
 			"remote_addr": r.RemoteAddr,
 			"status":      wrappedWriter.statusCode,
 			"duration":    time.Since(start),
-		}).Info("UI request")
+		}).Debug("UI request")
 	})
 }
 

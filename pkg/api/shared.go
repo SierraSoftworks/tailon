@@ -26,7 +26,7 @@ func (s *Server) LoggingMiddleware(next http.Handler) http.Handler {
 			"duration":   time.Since(start),
 			"remote":     r.RemoteAddr,
 			"user_agent": r.UserAgent(),
-		}).Info("HTTP request")
+		}).Debug("HTTP request")
 	})
 }
 
