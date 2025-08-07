@@ -331,6 +331,20 @@ body {
     margin-right: 0.5rem;
 }
 
+/* Log source colors */
+.log-stdout {
+    color: white;
+}
+
+.log-stderr {
+    color: var(--danger-color);
+}
+
+.log-audit {
+    color: #6b7280; /* dark grey */
+    font-style: italic;
+}
+
 /* Responsive accordion */
 @media (max-width: 1024px) {
     .app-details-grid {

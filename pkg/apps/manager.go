@@ -30,6 +30,7 @@ const (
 type LogLine struct {
 	Timestamp time.Time `json:"timestamp"`
 	Message   string    `json:"message"`
+	Source    string    `json:"source"`
 }
 
 type Application struct {
@@ -159,12 +160,18 @@ func (m *Manager) StartApp(ctx context.Context, name string) error {
 	app.StartedBy = user
 	app.StartedAt = &now
 
+	// Add audit log entry
+	m.addAuditLog(app, user, "Started application")
+
 	// Start log collection
 	go m.collectLogs(name, stdout, "stdout")
 	go m.collectLogs(name, stderr, "stderr")
 
 	// Monitor process
 	go func() {
+		// Capture user for the goroutine closure
+		currentUser := user
+
 		if err := cmd.Wait(); err != nil {
 			logger.WithField("app", name).WithError(err).Warn("Application exited with error")
 		}
@@ -177,6 +184,9 @@ func (m *Manager) StartApp(ctx context.Context, name string) error {
 		app.StartedBy = nil
 		app.StartedAt = nil
 		m.mux.Unlock()
+
+		// Add audit log for process exit
+		m.addAuditLog(app, currentUser, "Application process exited")
 
 		logger.WithField("app", name).Info("Application stopped")
 	}()
@@ -234,6 +244,10 @@ func (m *Manager) stopApp(ctx context.Context, name string, force bool) error {
 
 	// Set state to stopping
 	app.State = StateStopping
+
+	// Add audit log entry
+	auditMsg := fmt.Sprintf("Stopped application (%s)", details)
+	m.addAuditLog(app, user, auditMsg)
 
 	if force {
 		// Force stop with SIGKILL
@@ -307,20 +321,50 @@ func (m *Manager) collectLogs(appName string, reader io.Reader, source string) {
 		line := scanner.Text()
 		logLine := LogLine{
 			Timestamp: time.Now(),
-			Message:   fmt.Sprintf("[%s] %s", source, line),
+			Message:   line,
+			Source:    source,
 		}
 
+		// Safely add log line by looking up the app each time
 		m.mux.RLock()
 		app := m.apps[appName]
 		m.mux.RUnlock()
 
-		app.logMux.Lock()
-		app.logs = append(app.logs, logLine)
-		if len(app.logs) > maxLogLines {
-			// Remove oldest logs to maintain circular buffer
-			copy(app.logs, app.logs[1:])
-			app.logs = app.logs[:maxLogLines]
+		if app != nil {
+			m.addLogLine(app, logLine)
 		}
-		app.logMux.Unlock()
 	}
+}
+
+// addLogLine adds a log line to the application's log buffer
+func (m *Manager) addLogLine(app *Application, logLine LogLine) {
+	if app == nil {
+		return
+	}
+
+	app.logMux.Lock()
+	app.logs = append(app.logs, logLine)
+	if len(app.logs) > maxLogLines {
+		// Remove oldest logs to maintain circular buffer
+		copy(app.logs, app.logs[1:])
+		app.logs = app.logs[:maxLogLines]
+	}
+	app.logMux.Unlock()
+}
+
+// addAuditLog adds an audit log entry to the application's log buffer
+func (m *Manager) addAuditLog(app *Application, user *userctx.User, message string) {
+	userName := "Anonymous"
+	if user != nil && !user.IsAnonymous {
+		userName = user.DisplayName
+	}
+
+	auditMessage := fmt.Sprintf("%s: %s", userName, message)
+	logLine := LogLine{
+		Timestamp: time.Now(),
+		Message:   auditMessage,
+		Source:    "audit",
+	}
+
+	m.addLogLine(app, logLine)
 }

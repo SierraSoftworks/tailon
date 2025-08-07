@@ -56,7 +56,7 @@ class LogViewer {
             this.eventSource.onmessage = (event) => {
                 try {
                     const logData = JSON.parse(event.data);
-                    this.appendLog(logData.message, logData.timestamp, logData.level);
+                    this.appendLog(logData.message, logData.timestamp, logData.level, logData.source);
                 } catch (e) {
                     // Handle plain text messages
                     this.appendLog(event.data, new Date().toISOString());
@@ -93,10 +93,18 @@ class LogViewer {
     }
 
     // Append a log line
-    appendLog(message, timestamp, level = null) {
+    appendLog(message, timestamp, level = null, source = 'stdout') {
         if (!this.container) return;
 
-        const logLine = Utils.createElement('div', { className: 'log-line' }, [
+        // Determine source class for styling
+        let sourceClass = 'log-stdout'; // default
+        if (source === 'stderr') {
+            sourceClass = 'log-stderr';
+        } else if (source === 'audit') {
+            sourceClass = 'log-audit';
+        }
+
+        const logLine = Utils.createElement('div', { className: `log-line ${sourceClass}` }, [
             Utils.createElement('span', { className: 'log-timestamp' }, [
                 Utils.formatTimestamp(timestamp)
             ]),

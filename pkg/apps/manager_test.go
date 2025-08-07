@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sierrasoftworks/tail-on/pkg/config"
+	"github.com/sierrasoftworks/tail-on/pkg/userctx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -148,7 +149,8 @@ func TestManagerGetLogs(t *testing.T) {
 	for _, log := range logs {
 		assert.NotZero(t, log.Timestamp)
 		assert.NotEmpty(t, log.Message)
-		assert.True(t, log.Message[0] == '[') // Should start with [stdout] or [stderr]
+		assert.NotEmpty(t, log.Source)                                        // Should have a source field
+		assert.Contains(t, []string{"stdout", "stderr", "audit"}, log.Source) // Should be a valid source
 	}
 
 	// Stop the app
@@ -330,4 +332,217 @@ func TestApplicationStates(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, StateNotRunning, app.State)
 	assert.False(t, app.IsRunning())
+}
+
+func TestAuditLogging(t *testing.T) {
+	configs := []config.ApplicationConfig{
+		{
+			Name: "audit-test",
+			Path: "/bin/echo",
+			Args: []string{"Hello from audit test"},
+		},
+	}
+
+	manager := NewManager(configs)
+
+	// Create a test user context
+	user := &userctx.User{
+		ID:          "test-user-123",
+		DisplayName: "Test User",
+		LoginName:   "test@example.com",
+		IsAnonymous: false,
+	}
+	ctx := userctx.WithUser(context.Background(), user)
+
+	// Start the application
+	err := manager.StartApp(ctx, "audit-test")
+	require.NoError(t, err)
+
+	// Wait for process to complete and logs to be collected
+	time.Sleep(300 * time.Millisecond)
+
+	// Get logs
+	logs, err := manager.GetLogs("audit-test")
+	require.NoError(t, err)
+
+	// Verify we have logs
+	assert.Greater(t, len(logs), 0, "Should have some logs")
+
+	// Find the audit logs
+	var auditLogs []LogLine
+	var stdoutLogs []LogLine
+
+	for _, log := range logs {
+		switch log.Source {
+		case "audit":
+			auditLogs = append(auditLogs, log)
+		case "stdout":
+			stdoutLogs = append(stdoutLogs, log)
+		}
+	}
+
+	// Should have at least one audit log for starting
+	assert.Greater(t, len(auditLogs), 0, "Should have audit logs")
+
+	// Check the start audit log
+	found := false
+	for _, log := range auditLogs {
+		if log.Source == "audit" && log.Message == "Test User: Started application" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Should have audit log for application start")
+
+	// Should have stdout logs too
+	assert.Greater(t, len(stdoutLogs), 0, "Should have stdout logs")
+
+	// Check if the application is still running before trying to stop it
+	app, err := manager.GetApp("audit-test")
+	require.NoError(t, err)
+
+	if app.State == StateRunning {
+		// Stop the application
+		err = manager.StopApp(ctx, "audit-test")
+		require.NoError(t, err)
+
+		// Wait for stop to complete
+		time.Sleep(200 * time.Millisecond)
+
+		// Get logs again to check for stop audit log
+		logs, err = manager.GetLogs("audit-test")
+		require.NoError(t, err)
+
+		// Find stop audit logs
+		auditLogs = []LogLine{}
+		for _, log := range logs {
+			if log.Source == "audit" {
+				auditLogs = append(auditLogs, log)
+			}
+		}
+
+		// Should have audit logs for both start and stop
+		assert.GreaterOrEqual(t, len(auditLogs), 2, "Should have audit logs for start and stop")
+
+		// Check for stop audit log
+		foundStop := false
+		for _, log := range auditLogs {
+			if log.Source == "audit" && log.Message == "Test User: Stopped application (Using SIGINT)" {
+				foundStop = true
+				break
+			}
+		}
+		assert.True(t, foundStop, "Should have audit log for application stop")
+	}
+}
+
+func TestAuditLoggingAnonymousUser(t *testing.T) {
+	configs := []config.ApplicationConfig{
+		{
+			Name: "anonymous-test",
+			Path: "/bin/echo",
+			Args: []string{"Hello from anonymous test"},
+		},
+	}
+
+	manager := NewManager(configs)
+
+	// Use context without user (should default to anonymous)
+	ctx := context.Background()
+
+	// Start the application
+	err := manager.StartApp(ctx, "anonymous-test")
+	require.NoError(t, err)
+
+	// Wait for process to complete
+	time.Sleep(300 * time.Millisecond)
+
+	// Get logs
+	logs, err := manager.GetLogs("anonymous-test")
+	require.NoError(t, err)
+
+	// Find audit logs
+	var auditLogs []LogLine
+	for _, log := range logs {
+		if log.Source == "audit" {
+			auditLogs = append(auditLogs, log)
+		}
+	}
+
+	// Should have audit log with anonymous user
+	assert.Greater(t, len(auditLogs), 0, "Should have audit logs")
+
+	found := false
+	for _, log := range auditLogs {
+		if log.Source == "audit" && log.Message == "Anonymous: Started application" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Should have audit log with anonymous user")
+}
+
+func TestLogSourceTypes(t *testing.T) {
+	configs := []config.ApplicationConfig{
+		{
+			Name: "source-test",
+			Path: "/bin/sh",
+			Args: []string{"-c", "echo 'stdout message'; echo 'stderr message' >&2"},
+		},
+	}
+
+	manager := NewManager(configs)
+
+	// Create a test user context
+	user := &userctx.User{
+		ID:          "test-user",
+		DisplayName: "Source Test User",
+		IsAnonymous: false,
+	}
+	ctx := userctx.WithUser(context.Background(), user)
+
+	// Start the application
+	err := manager.StartApp(ctx, "source-test")
+	require.NoError(t, err)
+
+	// Wait for process to complete and logs to be collected
+	time.Sleep(300 * time.Millisecond)
+
+	// Get logs
+	logs, err := manager.GetLogs("source-test")
+	require.NoError(t, err)
+
+	// Categorize logs by source
+	sourceTypes := make(map[string]int)
+	for _, log := range logs {
+		sourceTypes[log.Source]++
+	}
+
+	// Should have all three source types
+	assert.Greater(t, sourceTypes["audit"], 0, "Should have audit logs")
+	assert.Greater(t, sourceTypes["stdout"], 0, "Should have stdout logs")
+	assert.Greater(t, sourceTypes["stderr"], 0, "Should have stderr logs")
+
+	// Verify specific log contents
+	var foundStdout, foundStderr, foundAudit bool
+	for _, log := range logs {
+		switch log.Source {
+		case "stdout":
+			if log.Message == "stdout message" {
+				foundStdout = true
+			}
+		case "stderr":
+			if log.Message == "stderr message" {
+				foundStderr = true
+			}
+		case "audit":
+			if log.Message == "Source Test User: Started application" {
+				foundAudit = true
+			}
+		}
+	}
+
+	assert.True(t, foundStdout, "Should find stdout message")
+	assert.True(t, foundStderr, "Should find stderr message")
+	assert.True(t, foundAudit, "Should find audit message")
 }
