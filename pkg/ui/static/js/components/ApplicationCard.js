@@ -123,9 +123,7 @@ class ApplicationCard {
     createActionButtonWithState(action, icon, tooltip) {
         const confirmationState = this.confirmationStates.get(action);
         
-        if (confirmationState === 'waiting') {
-            return this.createConfirmationButton(action, 'waiting', 'Please wait...');
-        } else if (confirmationState === 'confirming') {
+        if (confirmationState === 'confirming') {
             const confirmText = action === 'stop' ? 'Confirm Stop' : 'Confirm Restart';
             return this.createConfirmationButton(action, 'confirm', confirmText);
         } else {
@@ -263,26 +261,18 @@ class ApplicationCard {
 
     // Start the confirmation process for dangerous actions
     startConfirmation(action, button) {
-        // Set initial waiting state
-        this.confirmationStates.set(action, 'waiting');
+        // Set confirmation state immediately
+        this.confirmationStates.set(action, 'confirming');
         this.refreshActionButtons();
         
-        // After 1 second, change to confirmation state
-        setTimeout(() => {
-            if (this.confirmationStates.get(action) === 'waiting') {
-                this.confirmationStates.set(action, 'confirming');
-                this.refreshActionButtons();
-                
-                // Set 15-second timeout to reset
-                const timeoutId = setTimeout(() => {
-                    if (this.confirmationStates.get(action) === 'confirming') {
-                        this.resetButton(action);
-                    }
-                }, 15000);
-                
-                this.confirmationTimeouts.set(action, timeoutId);
+        // Set 15-second timeout to reset
+        const timeoutId = setTimeout(() => {
+            if (this.confirmationStates.get(action) === 'confirming') {
+                this.resetButton(action);
             }
-        }, 1000);
+        }, 15000);
+        
+        this.confirmationTimeouts.set(action, timeoutId);
     }
 
     // Clear confirmation state and timeout
