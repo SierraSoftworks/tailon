@@ -295,6 +295,7 @@ class ApplicationCard {
     // Render expand/collapse button
     renderExpandButton() {
         const chevron = Icons.chevronDown();
+        chevron.classList.add('chevron'); // Add chevron class for CSS rotation
         
         return Utils.createElement('button', {
             className: 'expand-btn',
@@ -302,7 +303,7 @@ class ApplicationCard {
                 e.stopPropagation();
                 this.toggleDetails();
             },
-            dataset: { tooltip: 'View Details' }
+            dataset: { tooltip: this.isExpanded ? 'Hide Details' : 'View Details' }
         }, [chevron]);
     }
 

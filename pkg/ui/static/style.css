@@ -184,13 +184,9 @@ body {
     transition: all 0.2s ease;
 }
 
-.app-accordion-header:hover {
-    background-color: var(--light-gray);
-}
-
 .app-accordion-item.expanded .app-accordion-header {
     border-bottom-color: var(--medium-gray);
-    background-color: var(--light-gray);
+    /* Remove background color change when expanded to maintain contrast */
 }
 
 .app-header-content {
