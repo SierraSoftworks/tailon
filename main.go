@@ -25,13 +25,16 @@ var (
 	verbose    bool
 )
 
+var Version = "dev"
+
 var rootCmd = &cobra.Command{
 	Use:   "tail-on",
 	Short: "A web service for managing applications over Tailscale",
 	Long: `tail-on is a web service that allows you to manage and monitor applications
 over your Tailscale network. It provides APIs to start, stop, and stream logs
 from configured applications.`,
-	Run: runServer,
+	Run:     runServer,
+	Version: Version,
 }
 
 func init() {

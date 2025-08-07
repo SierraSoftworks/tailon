@@ -1,4 +1,4 @@
-# tail-on
+# tailon
 
 A web service for managing applications over Tailscale, built with Go, Gorilla Mux, logrus, and Cobra.
 
