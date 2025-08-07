@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: tail-on API
+  title: TailOn API Documentation
   description: |
     A web service for managing applications over Tailscale. This API allows you to
     start, stop, restart, and monitor applications remotely, with real-time log streaming
@@ -42,7 +42,7 @@ paths:
                 anonymous:
                   summary: Anonymous user
                   value:
-                    id: anonymous
+                    id: "$anonymous$"
                     display_name: Anonymous
                     login_name: ""
                     node: ""
@@ -79,7 +79,7 @@ paths:
                     path: /bin/sh
                     args: ["-c", "while true; do echo 'Hello' $(date); sleep 2; done"]
                     env: ["APP_NAME=echo-server"]
-                  running: false
+                  state: not_running
                   pid: 0
                 counter:
                   config:
@@ -87,8 +87,15 @@ paths:
                     path: /bin/sh
                     args: ["-c", "i=0; while true; do echo 'Counter:' $i; i=$((i+1)); sleep 1; done"]
                     env: ["APP_NAME=counter"]
-                  running: true
+                  state: running
                   pid: 12345
+                  started_by:
+                    id: user123
+                    display_name: John Doe
+                    login_name: john@example.com
+                    node: johns-laptop
+                    is_anonymous: false
+                  started_at: "2025-08-07T12:00:00Z"
 
   /api/v1/apps/{app_name}:
     get:
@@ -173,6 +180,13 @@ paths:
           schema:
             type: string
           example: echo-server
+        - name: force
+          in: query
+          required: false
+          description: Force stop the application using SIGKILL instead of SIGTERM
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: Application stopped successfully
@@ -180,8 +194,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StatusResponse'
-              example:
-                status: stopped
+              examples:
+                normal_stop:
+                  summary: Normal stop
+                  value:
+                    status: stopped
+                force_stop:
+                  summary: Force stop
+                  value:
+                    status: force_stopped
         '400':
           description: Failed to stop application (e.g., not running)
           content:
@@ -274,16 +295,18 @@ paths:
                   $ref: '#/components/schemas/LogEntry'
               example:
                 - timestamp: "2025-08-07T12:00:00Z"
-                  message: "[stdout] Hello Wed Aug  7 12:00:00 UTC 2025"
+                  message: "Hello Wed Aug  7 12:00:00 UTC 2025"
+                  source: "stdout"
                 - timestamp: "2025-08-07T12:00:02Z"
-                  message: "[stdout] Hello Wed Aug  7 12:00:02 UTC 2025"
+                  message: "Hello Wed Aug  7 12:00:02 UTC 2025"
+                  source: "stdout"
             text/event-stream:
               schema:
                 type: string
                 format: text/event-stream
               example: |
-                data: {"timestamp":"2025-08-07T12:00:00Z","message":"[stdout] Hello Wed Aug  7 12:00:00 UTC 2025"}
-                data: {"timestamp":"2025-08-07T12:00:02Z","message":"[stdout] Hello Wed Aug  7 12:00:02 UTC 2025"}
+                data: {"timestamp":"2025-08-07T12:00:00Z","message":"Hello Wed Aug  7 12:00:00 UTC 2025","source":"stdout"}
+                data: {"timestamp":"2025-08-07T12:00:02Z","message":"Hello Wed Aug  7 12:00:02 UTC 2025","source":"stdout"}
         '404':
           description: Application not found
           content:
@@ -325,18 +348,30 @@ components:
       type: object
       required:
         - config
-        - running
+        - state
       properties:
         config:
           $ref: '#/components/schemas/ApplicationConfig'
-        running:
-          type: boolean
-          description: Whether the application is currently running
-          example: true
+        state:
+          type: string
+          enum:
+            - not_running
+            - running
+            - stopping
+          description: Current state of the application
+          example: running
         pid:
           type: integer
           description: Process ID of the running application (0 if not running)
           example: 12345
+        started_by:
+          $ref: '#/components/schemas/User'
+          description: User who started the application (only present if running)
+        started_at:
+          type: string
+          format: date-time
+          description: Timestamp when the application was started (only present if running)
+          example: "2025-08-07T12:00:00Z"
 
     ApplicationConfig:
       type: object
@@ -372,6 +407,7 @@ components:
       required:
         - timestamp
         - message
+        - source
       properties:
         timestamp:
           type: string
@@ -380,8 +416,16 @@ components:
           example: "2025-08-07T12:00:00Z"
         message:
           type: string
-          description: Log message including source (stdout/stderr) prefix
-          example: "[stdout] Hello World"
+          description: Log message content
+          example: "Hello World"
+        source:
+          type: string
+          enum:
+            - stdout
+            - stderr
+            - audit
+          description: Source of the log entry
+          example: stdout
 
     StatusResponse:
       type: object
@@ -394,6 +438,7 @@ components:
           enum:
             - started
             - stopped
+            - force_stopped
             - restarted
           example: started
 

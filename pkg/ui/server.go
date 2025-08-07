@@ -26,12 +26,14 @@ func NewServer(manager *apps.Manager) *Server {
 func (s *Server) Routes() *mux.Router {
 	r := mux.NewRouter()
 
+	// Serve the OpenAPI specification
+	r.HandleFunc("/docs/openapi.yaml", s.HandleOpenAPISpecYAML)
+
 	// Serve the SPA index.html for docs root and main routes
 	r.HandleFunc("/docs/", s.HandleSPA).Methods("GET")
 	r.HandleFunc("/", s.HandleSPA).Methods("GET")
 
 	// Static files
-	r.Handle("/docs/openapi.yaml", http.FileServer(http.FS(uiFS)))
 	r.PathPrefix("/static/").Handler(http.FileServer(http.FS(uiFS)))
 
 	// Add middleware
@@ -51,6 +53,18 @@ func (s *Server) HandleSPA(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 	w.Write(indexFile)
+}
+
+func (s *Server) HandleOpenAPISpecYAML(w http.ResponseWriter, r *http.Request) {
+	openapiFile, err := uiFS.ReadFile("static/openapi.yaml")
+	if err != nil {
+		logrus.WithError(err).Error("Failed to read openapi.yaml")
+		http.Error(w, "Failed to load OpenAPI specification", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Write(openapiFile)
 }
 
 func (s *Server) LoggingMiddleware(next http.Handler) http.Handler {

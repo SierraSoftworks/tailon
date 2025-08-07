@@ -66,32 +66,53 @@ class Docs {
         return header;
     }
 
-    // Load Swagger UI
+        // Load Swagger UI scripts dynamically
     loadSwaggerUI() {
-        // Check if Swagger UI is already loaded
         if (window.SwaggerUIBundle) {
             this.initializeSwaggerUI();
             return;
         }
 
-        // Load Swagger UI CSS
-        const cssLink = document.createElement('link');
-        cssLink.rel = 'stylesheet';
-        cssLink.href = 'https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui.css';
-        document.head.appendChild(cssLink);
+        // Load CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui.css';
+        document.head.appendChild(link);
 
-        // Load Swagger UI JS
+        // Track script loading
+        let bundleLoaded = false;
+        let presetLoaded = false;
+
+        const checkAndInitialize = () => {
+            if (bundleLoaded && presetLoaded && window.SwaggerUIBundle) {
+                this.initializeSwaggerUI();
+            }
+        };
+
+        // Load JavaScript bundle
         const script1 = document.createElement('script');
         script1.src = 'https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-bundle.js';
         script1.crossOrigin = 'anonymous';
+        script1.onload = () => {
+            bundleLoaded = true;
+            checkAndInitialize();
+        };
+        script1.onerror = () => {
+            console.error('Failed to load Swagger UI bundle script');
+            this.renderError('Failed to load API documentation scripts');
+        };
         
+        // Load JavaScript preset
         const script2 = document.createElement('script');
         script2.src = 'https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-standalone-preset.js';
         script2.crossOrigin = 'anonymous';
-
-        // Initialize Swagger UI after scripts load
         script2.onload = () => {
-            this.initializeSwaggerUI();
+            presetLoaded = true;
+            checkAndInitialize();
+        };
+        script2.onerror = () => {
+            console.error('Failed to load Swagger UI preset script');
+            this.renderError('Failed to load API documentation scripts');
         };
 
         document.head.appendChild(script1);
@@ -102,36 +123,62 @@ class Docs {
     initializeSwaggerUI() {
         if (!window.SwaggerUIBundle) {
             console.error('SwaggerUIBundle not loaded');
+            // Retry after a short delay
+            setTimeout(() => {
+                if (window.SwaggerUIBundle) {
+                    this.initializeSwaggerUI();
+                } else {
+                    console.error('SwaggerUIBundle still not available after retry');
+                }
+            }, 100);
             return;
         }
 
-        window.ui = SwaggerUIBundle({
-            url: `${this.baseURL}/docs/openapi.yaml`,
-            dom_id: '#swagger-ui',
-            deepLinking: true,
-            presets: [
-                SwaggerUIBundle.presets.apis,
-                SwaggerUIStandalonePreset
-            ],
-            plugins: [
-                SwaggerUIBundle.plugins.DownloadUrl
-            ],
-            layout: "StandaloneLayout",
-            tryItOutEnabled: true,
-            requestInterceptor: (request) => {
-                // Ensure requests go to the correct base URL
-                if (request.url.startsWith('/')) {
-                    request.url = this.baseURL + request.url;
+        if (!window.SwaggerUIStandalonePreset) {
+            console.error('SwaggerUIStandalonePreset not loaded');
+            // Retry after a short delay
+            setTimeout(() => {
+                if (window.SwaggerUIStandalonePreset) {
+                    this.initializeSwaggerUI();
+                } else {
+                    console.error('SwaggerUIStandalonePreset still not available after retry');
                 }
-                return request;
-            },
-            onComplete: () => {
-                console.log('Swagger UI loaded successfully');
-            },
-            onFailure: (error) => {
-                console.error('Failed to load Swagger UI:', error);
-            }
-        });
+            }, 100);
+            return;
+        }
+
+        try {
+            window.ui = SwaggerUIBundle({
+                url: `${this.baseURL}/docs/openapi.yaml`,
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                tryItOutEnabled: true,
+                requestInterceptor: (request) => {
+                    // Ensure requests go to the correct base URL
+                    if (request.url.startsWith('/')) {
+                        request.url = this.baseURL + request.url;
+                    }
+                    return request;
+                },
+                onComplete: () => {
+                    console.log('Swagger UI loaded successfully');
+                },
+                onFailure: (error) => {
+                    console.error('Failed to load Swagger UI:', error);
+                }
+            });
+        } catch (error) {
+            console.error('Error initializing Swagger UI:', error);
+            this.renderError('Failed to initialize API documentation');
+        }
     }
 
     // Create navigation tabs
