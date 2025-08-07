@@ -81,6 +81,7 @@ paths:
                     env: ["APP_NAME=echo-server"]
                   state: not_running
                   pid: 0
+                  last_exit_code: 0
                 counter:
                   config:
                     name: counter
@@ -89,13 +90,14 @@ paths:
                     env: ["APP_NAME=counter"]
                   state: running
                   pid: 12345
-                  started_by:
+                  last_exit_code: 0
+                  state_changed_by:
                     id: user123
                     display_name: John Doe
                     login_name: john@example.com
                     node: johns-laptop
                     is_anonymous: false
-                  started_at: "2025-08-07T12:00:00Z"
+                  state_changed_at: "2025-08-07T12:00:00Z"
 
   /api/v1/apps/{app_name}:
     get:
@@ -364,14 +366,18 @@ components:
           type: integer
           description: Process ID of the running application (0 if not running)
           example: 12345
-        started_by:
+        state_changed_by:
           $ref: '#/components/schemas/User'
-          description: User who started the application (only present if running)
-        started_at:
+          description: User who last changed the application state (only present if state was changed by a user)
+        state_changed_at:
           type: string
           format: date-time
-          description: Timestamp when the application was started (only present if running)
+          description: Timestamp when the application state was last changed (only present if state was changed by a user)
           example: "2025-08-07T12:00:00Z"
+        last_exit_code:
+          type: integer
+          description: Exit code from the last time the application stopped (0 indicates successful exit)
+          example: 0
 
     ApplicationConfig:
       type: object

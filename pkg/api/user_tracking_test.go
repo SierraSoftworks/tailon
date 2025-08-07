@@ -15,13 +15,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestApplicationUserTracking(t *testing.T) {
+func TestApplicationStateTracking(t *testing.T) {
 	// Create test applications including a long-running one
 	configs := []config.ApplicationConfig{
 		{
 			Name: "long-running-test",
 			Path: "/bin/sleep",
-			Args: []string{"10"}, // Simple sleep command that definitely runs for 10 seconds
+			Args: []string{"30"}, // Use a simple sleep command
 			Env:  []string{"TEST=1"},
 		},
 	}
@@ -48,7 +48,7 @@ func TestApplicationUserTracking(t *testing.T) {
 	// Wait for app to start (shorter wait since sleep command starts immediately)
 	time.Sleep(100 * time.Millisecond)
 
-	// Get the application and verify user tracking
+	// Get the application and verify state change tracking
 	app, err := manager.GetApp("long-running-test")
 	require.NoError(t, err)
 
@@ -56,14 +56,17 @@ func TestApplicationUserTracking(t *testing.T) {
 	assert.Equal(t, apps.StateRunning, app.State)
 	assert.Greater(t, app.PID, 0)
 
-	// Then check user tracking (this is where the test is failing)
-	assert.NotNil(t, app.StartedBy)
-	assert.Equal(t, testUser.ID, app.StartedBy.ID)
-	assert.Equal(t, testUser.DisplayName, app.StartedBy.DisplayName)
-	assert.Equal(t, testUser.LoginName, app.StartedBy.LoginName)
+	// Check that exit code is properly initialized for a running app
+	assert.Equal(t, 0, app.LastExitCode, "LastExitCode should be 0 for a running application")
 
-	assert.NotNil(t, app.StartedAt)
-	assert.WithinDuration(t, time.Now(), *app.StartedAt, time.Minute)
+	// Then check state change tracking
+	assert.NotNil(t, app.StateChangedBy)
+	assert.Equal(t, testUser.ID, app.StateChangedBy.ID)
+	assert.Equal(t, testUser.DisplayName, app.StateChangedBy.DisplayName)
+	assert.Equal(t, testUser.LoginName, app.StateChangedBy.LoginName)
+
+	assert.NotNil(t, app.StateChangedAt)
+	assert.WithinDuration(t, time.Now(), *app.StateChangedAt, time.Minute)
 
 	// Test that the API returns this information
 	req := httptest.NewRequest("GET", "/api/v1/apps/long-running-test", nil)
@@ -80,25 +83,33 @@ func TestApplicationUserTracking(t *testing.T) {
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	require.NoError(t, err)
 
-	// Verify the API response includes user tracking info
-	assert.Contains(t, response, "started_by")
-	assert.Contains(t, response, "started_at")
+	// Verify the API response includes state change tracking info
+	assert.Contains(t, response, "state_changed_by")
+	assert.Contains(t, response, "state_changed_at")
+	assert.Contains(t, response, "last_exit_code")
 
-	startedBy, ok := response["started_by"].(map[string]interface{})
+	stateChangedBy, ok := response["state_changed_by"].(map[string]interface{})
 	require.True(t, ok)
-	assert.Equal(t, testUser.ID, startedBy["id"])
-	assert.Equal(t, testUser.DisplayName, startedBy["display_name"])
+	assert.Equal(t, testUser.ID, stateChangedBy["id"])
+	assert.Equal(t, testUser.DisplayName, stateChangedBy["display_name"])
+
+	// Verify exit code is 0 for running app
+	assert.Equal(t, float64(0), response["last_exit_code"])
 
 	// Stop the application
 	err = manager.StopApp(ctx, "long-running-test")
 	require.NoError(t, err)
 
 	// Wait for app to stop
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
-	// Verify user tracking is cleared when app stops
+	// Verify state change tracking persists and shows who stopped the app
 	app, err = manager.GetApp("long-running-test")
 	require.NoError(t, err)
-	assert.Nil(t, app.StartedBy)
-	assert.Nil(t, app.StartedAt)
+	assert.Equal(t, apps.StateNotRunning, app.State)
+	assert.NotNil(t, app.StateChangedBy)
+	assert.Equal(t, testUser.ID, app.StateChangedBy.ID)
+	assert.NotNil(t, app.StateChangedAt)
+	// Exit code will be signal-related (not 0) since we terminated the process
+	assert.NotEqual(t, 0, app.LastExitCode, "Process terminated by signal should not have exit code 0")
 }

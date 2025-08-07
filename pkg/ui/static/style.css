@@ -205,10 +205,30 @@ body {
     min-width: 200px;
 }
 
-.app-summary {
+.app-runtime-info {
     flex-grow: 1;
     color: var(--secondary-color);
     font-size: 0.875rem;
+}
+
+.runtime-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.runtime-item {
+    display: block;
+}
+
+.runtime-item:not(:last-child) {
+    margin-bottom: 0.25rem;
+}
+
+/* Style exit code items when they indicate an error */
+.runtime-item.exit-code-error {
+    color: var(--error-color);
+    font-weight: 500;
 }
 
 .app-controls {

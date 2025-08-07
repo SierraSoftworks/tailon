@@ -30,17 +30,12 @@ class ApplicationCard {
             this.renderStatus()
         ]);
 
-        const summary = Utils.createElement('div', { className: 'app-summary' }, [
-            Utils.createElement('code', {}, [
-                `${this.app.config.path} ${this.app.config.args?.join(' ') || ''}`.trim()
-            ])
-        ]);
-
+        const runtimeInfo = this.renderRuntimeInfo();
         const controls = this.renderControls();
 
         const headerContent = Utils.createElement('div', { className: 'app-header-content' }, [
             nameSection,
-            summary,
+            runtimeInfo,
             controls
         ]);
 
@@ -82,6 +77,79 @@ class ApplicationCard {
             Utils.createElement('span', { className: `status-dot ${statusClass}` }),
             statusText + pidText
         ]);
+    }
+
+    // Render runtime information (duration and user who made the state change)
+    renderRuntimeInfo() {
+        const info = [];
+
+        if (this.app.state_changed_at) {
+            const stateChangeTime = new Date(this.app.state_changed_at);
+            const now = new Date();
+            const duration = this.formatDuration(now - stateChangeTime);
+
+            if (this.app.state === 'running') {
+                info.push(`Running for ${duration}`);
+            } else if (this.app.state === 'not_running') {
+                info.push(`Stopped ${duration} ago`);
+            } else if (this.app.state === 'stopping') {
+                info.push(`Stopping for ${duration}`);
+            }
+        }
+
+        if (this.app.state_changed_by && !this.app.state_changed_by.is_anonymous) {
+            const user = this.app.state_changed_by;
+            const userName = user.display_name || user.login_name || user.id;
+            
+            if (this.app.state === 'running') {
+                info.push(`Started by ${userName}`);
+            } else if (this.app.state === 'not_running') {
+                info.push(`Stopped by ${userName}`);
+            } else if (this.app.state === 'stopping') {
+                info.push(`Being stopped by ${userName}`);
+            }
+        }
+
+        // Show exit code if the application is stopped and exit code is non-zero
+        if (this.app.state === 'not_running' && this.app.last_exit_code && this.app.last_exit_code !== 0) {
+            info.push(`Exit code: ${this.app.last_exit_code}`);
+        }
+
+        // If no information is available, show a placeholder
+        if (info.length === 0) {
+            if (this.app.state === 'not_running') {
+                info.push('Not running');
+            } else {
+                info.push('No runtime information available');
+            }
+        }
+
+        return Utils.createElement('div', { className: 'app-runtime-info' }, [
+            Utils.createElement('div', { className: 'runtime-text' }, info.map(text => {
+                const isExitCode = text.startsWith('Exit code:');
+                return Utils.createElement('span', { 
+                    className: isExitCode ? 'runtime-item exit-code-error' : 'runtime-item' 
+                }, [text]);
+            }))
+        ]);
+    }
+
+    // Format duration in human readable format
+    formatDuration(milliseconds) {
+        const seconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (days > 0) {
+            return `${days}d ${hours % 24}h ${minutes % 60}m`;
+        } else if (hours > 0) {
+            return `${hours}h ${minutes % 60}m`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds % 60}s`;
+        } else {
+            return `${seconds}s`;
+        }
     }
 
     // Render control buttons

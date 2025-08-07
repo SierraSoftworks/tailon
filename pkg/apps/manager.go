@@ -34,15 +34,16 @@ type LogLine struct {
 }
 
 type Application struct {
-	Config    config.ApplicationConfig `json:"config"`
-	State     ApplicationState         `json:"state"`
-	PID       int                      `json:"pid,omitempty"`
-	StartedBy *userctx.User            `json:"started_by,omitempty"`
-	StartedAt *time.Time               `json:"started_at,omitempty"`
-	logs      []LogLine
-	logMux    sync.RWMutex
-	cmd       *exec.Cmd
-	cancel    context.CancelFunc
+	Config         config.ApplicationConfig `json:"config"`
+	State          ApplicationState         `json:"state"`
+	PID            int                      `json:"pid,omitempty"`
+	LastExitCode   int                      `json:"last_exit_code"`
+	StateChangedBy *userctx.User            `json:"state_changed_by,omitempty"`
+	StateChangedAt *time.Time               `json:"state_changed_at,omitempty"`
+	logs           []LogLine
+	logMux         sync.RWMutex
+	cmd            *exec.Cmd
+	cancel         context.CancelFunc
 }
 
 // IsRunning returns true if the application is currently running
@@ -59,9 +60,10 @@ func NewManager(configs []config.ApplicationConfig) *Manager {
 	apps := make(map[string]*Application)
 	for _, cfg := range configs {
 		apps[cfg.Name] = &Application{
-			Config: cfg,
-			State:  StateNotRunning,
-			logs:   make([]LogLine, 0, maxLogLines),
+			Config:       cfg,
+			State:        StateNotRunning,
+			LastExitCode: 0,
+			logs:         make([]LogLine, 0, maxLogLines),
 		}
 	}
 
@@ -77,11 +79,12 @@ func (m *Manager) GetApps() map[string]*Application {
 	result := make(map[string]*Application)
 	for name, app := range m.apps {
 		result[name] = &Application{
-			Config:    app.Config,
-			State:     app.State,
-			PID:       app.PID,
-			StartedBy: app.StartedBy,
-			StartedAt: app.StartedAt,
+			Config:         app.Config,
+			State:          app.State,
+			PID:            app.PID,
+			StateChangedBy: app.StateChangedBy,
+			StateChangedAt: app.StateChangedAt,
+			LastExitCode:   app.LastExitCode,
 		}
 	}
 	return result
@@ -97,11 +100,12 @@ func (m *Manager) GetApp(name string) (*Application, error) {
 	}
 
 	return &Application{
-		Config:    app.Config,
-		State:     app.State,
-		PID:       app.PID,
-		StartedBy: app.StartedBy,
-		StartedAt: app.StartedAt,
+		Config:         app.Config,
+		State:          app.State,
+		PID:            app.PID,
+		StateChangedBy: app.StateChangedBy,
+		StateChangedAt: app.StateChangedAt,
+		LastExitCode:   app.LastExitCode,
 	}, nil
 }
 
@@ -157,8 +161,9 @@ func (m *Manager) StartApp(ctx context.Context, name string) error {
 	app.cancel = cancel
 	app.State = StateRunning
 	app.PID = cmd.Process.Pid
-	app.StartedBy = user
-	app.StartedAt = &now
+	app.StateChangedBy = user
+	app.StateChangedAt = &now
+	app.LastExitCode = 0 // Reset exit code when starting
 
 	// Add audit log entry
 	m.addAuditLog(app, user, "Started application")
@@ -172,23 +177,35 @@ func (m *Manager) StartApp(ctx context.Context, name string) error {
 		// Capture user for the goroutine closure
 		currentUser := user
 
+		var exitCode int
 		if err := cmd.Wait(); err != nil {
 			logger.WithField("app", name).WithError(err).Warn("Application exited with error")
+			// Extract exit code from error if possible
+			if exitError, ok := err.(*exec.ExitError); ok {
+				exitCode = exitError.ExitCode()
+			} else {
+				exitCode = 1 // Default to 1 for other errors
+			}
+		} else {
+			exitCode = 0 // Successful exit
 		}
 
 		m.mux.Lock()
+		now := time.Now()
 		app.State = StateNotRunning
 		app.PID = 0
 		app.cmd = nil
 		app.cancel = nil
-		app.StartedBy = nil
-		app.StartedAt = nil
+		app.StateChangedBy = currentUser
+		app.StateChangedAt = &now
+		app.LastExitCode = exitCode
 		m.mux.Unlock()
 
 		// Add audit log for process exit
-		m.addAuditLog(app, currentUser, "Application process exited")
+		auditMsg := fmt.Sprintf("Application process exited with code %d", exitCode)
+		m.addAuditLog(app, currentUser, auditMsg)
 
-		logger.WithField("app", name).Info("Application stopped")
+		logger.WithField("app", name).WithField("exit_code", exitCode).Info("Application stopped")
 	}()
 
 	logger.WithField("app", name).WithField("pid", app.PID).Info("Application started")
@@ -242,8 +259,11 @@ func (m *Manager) stopApp(ctx context.Context, name string, force bool) error {
 		"event":   event,
 	}).Info("User stopped application")
 
-	// Set state to stopping
+	// Set state to stopping and record who initiated the stop
+	now := time.Now()
 	app.State = StateStopping
+	app.StateChangedBy = user
+	app.StateChangedAt = &now
 
 	// Add audit log entry
 	auditMsg := fmt.Sprintf("Stopped application (%s)", details)

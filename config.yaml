@@ -11,6 +11,12 @@ applications:
     env:
       - "APP_NAME=counter"
     stop_signal: "SIGINT"
+  - name: "error-test"
+    path: "/bin/sh"
+    args: ["-c", "echo 'Starting up...'; sleep 2; echo 'Simulating error'; exit 42"]
+    env:
+      - "APP_NAME=error-test"
+    stop_signal: "SIGTERM"
 
 listen: "localhost:8080"
 
