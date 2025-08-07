@@ -53,7 +53,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	if verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetFormatter(&logrus.TextFormatter{})
 
 	// Load configuration
 	cfg, err := config.Load(configFile)
