@@ -114,8 +114,7 @@ const Icons = {
     ]),
     
     stop: () => Utils.createSVG('0 0 24 24', [
-        { type: 'rect', attrs: { x: '6', y: '4', width: '4', height: '16' } },
-        { type: 'rect', attrs: { x: '14', y: '4', width: '4', height: '16' } }
+        { type: 'rect', attrs: { x: '6', y: '6', width: '12', height: '12' } }
     ]),
     
     restart: () => Utils.createSVG('0 0 24 24', [
