@@ -43,6 +43,7 @@ body {
     box-shadow: var(--shadow);
     position: sticky;
     top: 0;
+    z-index: 10; /* Ensure header stays above page content */
 }
 
 .header-content {
@@ -716,7 +717,7 @@ body {
     opacity: 0;
     animation: tooltipFadeIn 0.2s ease-out forwards;
     pointer-events: none;
-    z-index: 1000; /* Ensure tooltips appear above all other elements */
+    z-index: 20; /* Ensure tooltips appear above content but below modals */
 }
 
 .btn[data-tooltip]:hover::before {
@@ -731,7 +732,7 @@ body {
     opacity: 0;
     animation: tooltipFadeIn 0.2s ease-out forwards;
     pointer-events: none;
-    z-index: 1000; /* Ensure tooltip arrows appear above all other elements */
+    z-index: 20; /* Ensure tooltip arrows appear above content but below modals */
 }
 
 /* Ensure button group buttons can show tooltips */
