@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/sierrasoftworks/tailon/pkg/userctx"
 	"gopkg.in/yaml.v3"
 )
 
@@ -35,7 +36,7 @@ type TailscaleConfig struct {
 
 type SecurityConfig struct {
 	// Whether to allow anonymous users when Tailscale is disabled
-	DefaultRole string `json:"default_role,omitempty" yaml:"default_role"`
+	DefaultRole userctx.Role `json:"default_role,omitempty" yaml:"default_role"`
 	// List of allowed IP addresses/CIDR blocks for anonymous access
 	AllowedIPs []string `json:"allowed_ips" yaml:"allowed_ips"`
 	// Whether to hide environment variables in API responses
