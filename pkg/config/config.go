@@ -37,10 +37,6 @@ type TailscaleConfig struct {
 type SecurityConfig struct {
 	// Whether to allow anonymous users when Tailscale is disabled
 	DefaultRole userctx.Role `json:"default_role,omitempty" yaml:"default_role"`
-	// List of allowed IP addresses/CIDR blocks for anonymous access
-	AllowedIPs []string `json:"allowed_ips" yaml:"allowed_ips"`
-	// Whether to hide environment variables in API responses
-	HideEnvVars bool `json:"hide_env_vars" yaml:"hide_env_vars"`
 }
 
 func Load(filename string) (*Config, error) {

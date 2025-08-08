@@ -120,14 +120,6 @@ Tailon includes comprehensive security features to control access and protect se
 security:
   # Default role for anonymous users (when Tailscale is disabled)
   default_role: "admin"     # Options: admin, operator, viewer, or "" (none)
-  
-  # Restrict anonymous access to specific IP ranges
-  allowed_ips:
-    - "127.0.0.1"        # localhost only
-    - "192.168.1.0/24"   # local network
-  
-  # Hide environment variables in API responses
-  hide_env_vars: false
 
 applications:
   - name: "secure-app"
@@ -207,7 +199,6 @@ access).
 ```yaml
 security:
   default_role: ""          # No default access for anonymous users
-  hide_env_vars: true       # Hide sensitive environment variables
 
 tailscale:
   enabled: true             # Use Tailscale for secure access
@@ -219,9 +210,6 @@ tailscale:
 listen: "localhost:8080"    # Bind to localhost only
 security:
   default_role: "admin"     # Allow full access for development
-  allowed_ips:
-    - "127.0.0.1"           # Only allow localhost access
-  hide_env_vars: false      # Allow viewing env vars for debugging
 ```
 
 ### Managing Applications
@@ -356,10 +344,6 @@ listen: "localhost:8080"  # Bind to local interface
 # Configure security settings for non-Tailscale access
 security:
   allow_anonymous: true      # Allow access without Tailscale auth
-  allowed_ips:              # Restrict to specific IPs (optional)
-    - "127.0.0.1"           # localhost
-    - "192.168.1.0/24"      # local network
-  hide_env_vars: true       # Hide sensitive environment variables
 ```
 
 **Security Warning**: When binding to non-localhost addresses (e.g., `0.0.0.0:8080`), anyone with network access to your machine can control your applications. Always use appropriate security configuration and consider using Tailscale for secure remote access instead.

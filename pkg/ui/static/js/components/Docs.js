@@ -109,7 +109,10 @@ tailscale:
     working_dir: "/var/www/html"
     env:
       - "PYTHONPATH=/app"
-      - "PORT=8000"`);
+      - "PORT=8000"
+      
+security:
+    default_role: admin`);
 
         const tailscaleConfig = this.createSubSection('Tailscale Integration', `tailscale:
   name: "my-tailon-server"      # Hostname on your tailnet
@@ -153,15 +156,7 @@ listen: "localhost:8080"
 
         const securityConfig = this.createSubSection('Basic Security Configuration', `security:
   # Default role for anonymous users (when Tailscale is disabled)
-  default_role: "admin"     # Options: admin, operator, viewer, or "" (none)
-  
-  # Restrict anonymous access to specific IP ranges
-  allowed_ips:
-    - "127.0.0.1"        # localhost only
-    - "192.168.1.0/24"   # local network
-  
-  # Hide environment variables in API responses
-  hide_env_vars: true`);
+  default_role: "admin"     # Options: admin, operator, viewer, or "" (none)`);
 
         const tailscaleCaps = this.createSubSection('Tailscale User Capabilities', `# In your Tailscale ACL policy.hujson
 {
@@ -196,7 +191,6 @@ listen: "localhost:8080"
         const prodConfig = this.createSubSection('Production Configuration', `# Secure production setup
 security:
   default_role: ""          # No default access for anonymous users
-  hide_env_vars: true       # Hide sensitive environment variables
 
 tailscale:
   enabled: true             # Use Tailscale for secure access
