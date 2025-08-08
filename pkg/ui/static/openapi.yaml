@@ -8,6 +8,9 @@ info:
       description: |
         Returns a list of all applications configured in the system with their current status.
         Only returns applications for which the user has at least viewer role.
+        
+        **Note**: Environment variables are only included for applications where the user
+        has admin role. For other applications, `env` will be `null`.
       operationId: getApps
       tags:
         - Applications
@@ -170,6 +173,9 @@ paths:
       description: |
         Returns detailed information about a specific application.
         Requires viewer role or higher for the specified application.
+        
+        **Note**: Environment variables are only included in the response if the user
+        has admin role for the application. Non-admin users will see `env: null`.
       operationId: getApp
       tags:
         - Applications
@@ -547,8 +553,12 @@ paths:
           type: array
           items:
             type: string
-          description: Environment variables in KEY=VALUE format
+          description: |
+            Environment variables in KEY=VALUE format.
+            Only visible to users with admin role for the application.
+            Will be null for non-admin users.
           example: ["APP_NAME=echo-server", "DEBUG=true"]
+          nullable: true
 
     LogEntry:
       type: object

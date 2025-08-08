@@ -74,7 +74,7 @@ func TestApplicationStateTracking(t *testing.T) {
 	// Test that the API returns this information
 	req := httptest.NewRequest("GET", "/api/v1/apps/long-running-test", nil)
 	req = mux.SetURLVars(req, map[string]string{"app_name": "long-running-test"})
-	
+
 	// Set user context properly for authorization
 	userCtx := userctx.WithUser(req.Context(), testUser)
 	req = req.WithContext(userCtx)
