@@ -14,6 +14,11 @@ func (s *Server) HandleStartApp(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	appName := vars["app_name"]
 
+	// Check authorization - require operator role to start applications
+	if !s.RequireAuthorization(w, r, AppOperator()) {
+		return
+	}
+
 	if err := s.manager.StartApp(r.Context(), appName); err != nil {
 		logrus.WithError(err).WithField("app", appName).Error("Failed to start application")
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -28,6 +33,11 @@ func (s *Server) HandleStartApp(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleStopApp(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	appName := vars["app_name"]
+
+	// Check authorization - require operator role to stop applications
+	if !s.RequireAuthorization(w, r, AppOperator()) {
+		return
+	}
 
 	// Check for force parameter
 	force := r.URL.Query().Get("force") == "true"
@@ -58,6 +68,11 @@ func (s *Server) HandleStopApp(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleRestartApp(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	appName := vars["app_name"]
+
+	// Check authorization - require operator role to restart applications
+	if !s.RequireAuthorization(w, r, AppOperator()) {
+		return
+	}
 
 	// Check if app exists first
 	_, err := s.manager.GetApp(appName)

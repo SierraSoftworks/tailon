@@ -4,7 +4,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sierrasoftworks/tailon/pkg/apps"
 	"github.com/sierrasoftworks/tailon/pkg/userctx"
-	"tailscale.com/client/tailscale"
+	"tailscale.com/client/local"
 )
 
 type Server struct {
@@ -19,7 +19,7 @@ func NewServer(manager *apps.Manager) *Server {
 	}
 }
 
-func NewServerWithTailscale(manager *apps.Manager, localClient *tailscale.LocalClient) *Server {
+func NewServerWithTailscale(manager *apps.Manager, localClient *local.Client) *Server {
 	return &Server{
 		manager:        manager,
 		userMiddleware: userctx.NewMiddleware(localClient),

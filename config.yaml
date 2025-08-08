@@ -27,9 +27,9 @@ tailscale:
 
 # Security configuration (NEW!)
 security:
-  # Whether to allow anonymous users when Tailscale is disabled
-  # Set to false for production environments
-  allow_anonymous: true
+  # The default role which should be assigned in cases where a more specific
+  # role is not specified as part of the Tailscale capabilities for the user.
+  default_role: admin
   
   # Restrict anonymous access to specific IP ranges (optional)
   # Uncomment and configure for additional security

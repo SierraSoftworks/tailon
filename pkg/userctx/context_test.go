@@ -10,7 +10,7 @@ import (
 
 func TestUserContext(t *testing.T) {
 	// Test anonymous user
-	anonymous := Anonymous()
+	anonymous := Anonymous(RoleNone)
 	assert.True(t, anonymous.IsAnonymous)
 	assert.Equal(t, "$anonymous$", anonymous.ID)
 	assert.Equal(t, "Anonymous", anonymous.DisplayName)
@@ -31,7 +31,7 @@ func TestUserContext(t *testing.T) {
 
 func TestTailscaleUser(t *testing.T) {
 	// Test with nil user info
-	user := NewTailscaleUser(nil)
+	user := NewTailscaleUser(nil, RoleViewer)
 	assert.True(t, user.IsAnonymous)
 	assert.Equal(t, "$anonymous$", user.ID)
 
@@ -41,14 +41,23 @@ func TestTailscaleUser(t *testing.T) {
 		DisplayName: "John Doe",
 		LoginName:   "john@example.com",
 		Node:        "johns-laptop",
+		Grants: []RoleAssignment{
+			RoleAssignment{
+				Role: RoleAdmin,
+				Applications: []string{
+					"test-app",
+				},
+			},
+		},
 	}
 
-	user = NewTailscaleUser(userInfo)
+	user = NewTailscaleUser(userInfo, RoleViewer)
 	assert.False(t, user.IsAnonymous)
 	assert.Equal(t, "user123", user.ID)
 	assert.Equal(t, "John Doe", user.DisplayName)
 	assert.Equal(t, "john@example.com", user.LoginName)
 	assert.Equal(t, "johns-laptop", user.Node)
+	assert.Equal(t, RoleAdmin, user.GetRole("test-app"))
 }
 
 func TestUserEvent(t *testing.T) {

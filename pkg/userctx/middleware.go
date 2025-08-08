@@ -6,16 +6,17 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
-	"tailscale.com/client/tailscale"
+	"tailscale.com/client/local"
+	"tailscale.com/tailcfg"
 )
 
 // Middleware provides user context extraction middleware
 type Middleware struct {
-	localClient *tailscale.LocalClient
+	localClient *local.Client
 }
 
 // NewMiddleware creates a new user context middleware
-func NewMiddleware(localClient *tailscale.LocalClient) *Middleware {
+func NewMiddleware(localClient *local.Client) *Middleware {
 	return &Middleware{
 		localClient: localClient,
 	}
@@ -55,17 +56,21 @@ func (m *Middleware) extractUser(r *http.Request) *User {
 		host = remoteAddr
 	}
 
+	defaultRole := getDefaultRoleFromContext(r.Context())
+
 	// If no LocalClient is available, return anonymous user with IP tracking
 	if m.localClient == nil {
-		return AnonymousFromIP(remoteAddr)
+		return AnonymousFromIP(remoteAddr, defaultRole)
 	}
 
 	// Extract user information from Tailscale
 	whois, err := m.localClient.WhoIs(r.Context(), remoteAddr)
 	if err != nil {
 		logrus.WithError(err).WithField("remote_addr", remoteAddr).Debug("Failed to get Tailscale user info, using anonymous")
-		return AnonymousFromIP(remoteAddr)
+		return AnonymousFromIP(remoteAddr, defaultRole)
 	}
+
+	grants, err := tailcfg.UnmarshalCapJSON[RoleAssignment](whois.CapMap, tailcfg.PeerCapability("https://sierrasoftworks.com/cap/tailon"))
 
 	// Convert Tailscale user info to our user format
 	if whois.UserProfile != nil {
@@ -75,8 +80,9 @@ func (m *Middleware) extractUser(r *http.Request) *User {
 			LoginName:   whois.UserProfile.LoginName,
 			Node:        whois.Node.Name,
 			IPAddress:   host,
-		})
+			Grants:      grants,
+		}, defaultRole)
 	}
 
-	return AnonymousFromIP(remoteAddr)
+	return AnonymousFromIP(remoteAddr, defaultRole)
 }

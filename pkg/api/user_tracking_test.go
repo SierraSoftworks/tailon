@@ -36,6 +36,9 @@ func TestApplicationStateTracking(t *testing.T) {
 		LoginName:   "test@example.com",
 		Node:        "test-node",
 		IsAnonymous: false,
+		ApplicationRoles: map[string]string{
+			"long-running-test": userctx.RoleAdmin, // Give admin access to the test app
+		},
 	}
 
 	// Create context with user
@@ -70,8 +73,11 @@ func TestApplicationStateTracking(t *testing.T) {
 
 	// Test that the API returns this information
 	req := httptest.NewRequest("GET", "/api/v1/apps/long-running-test", nil)
-	req = req.WithContext(ctx) // Add user context to request FIRST
 	req = mux.SetURLVars(req, map[string]string{"app_name": "long-running-test"})
+	
+	// Set user context properly for authorization
+	userCtx := userctx.WithUser(req.Context(), testUser)
+	req = req.WithContext(userCtx)
 
 	recorder := httptest.NewRecorder()
 

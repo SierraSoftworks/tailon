@@ -15,6 +15,11 @@ func (s *Server) HandleLogs(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	appName := vars["app_name"]
 
+	// Check authorization - require viewer role to view logs
+	if !s.RequireAuthorization(w, r, AppViewer()) {
+		return
+	}
+
 	// Check if this is a Server-Sent Events request
 	if r.Header.Get("Accept") == "text/event-stream" || r.URL.Query().Get("stream") == "true" {
 		s.handleLogsSSE(w, r, appName)

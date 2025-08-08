@@ -18,6 +18,7 @@ import (
 	"github.com/sierrasoftworks/tailon/pkg/apps"
 	"github.com/sierrasoftworks/tailon/pkg/config"
 	"github.com/sierrasoftworks/tailon/pkg/ui"
+	"github.com/sierrasoftworks/tailon/pkg/userctx"
 )
 
 var (
@@ -78,6 +79,8 @@ func runServer(cmd *cobra.Command, args []string) {
 			"or rely on Tailscale integration for secure remote access.")
 	}
 
+	ctx, cancelRequests := context.WithCancel(userctx.WithDefaultRole(context.Background(), cfg.Security.DefaultRole))
+
 	// Create application manager
 	appManager := apps.NewManager(cfg.Applications)
 
@@ -118,6 +121,9 @@ func runServer(cmd *cobra.Command, args []string) {
 			ReadTimeout:  30 * time.Second,
 			WriteTimeout: 30 * time.Second,
 			IdleTimeout:  120 * time.Second,
+			BaseContext: func(net.Listener) context.Context {
+				return ctx
+			},
 		}
 
 		// Start Tailscale server
@@ -165,6 +171,9 @@ func runServer(cmd *cobra.Command, args []string) {
 			ReadTimeout:  30 * time.Second,
 			WriteTimeout: 30 * time.Second,
 			IdleTimeout:  120 * time.Second,
+			BaseContext: func(net.Listener) context.Context {
+				return ctx
+			},
 		}
 
 		go func() {
@@ -185,8 +194,8 @@ func runServer(cmd *cobra.Command, args []string) {
 	logrus.Info("Shutting down server...")
 
 	// Graceful shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	ctx, cancelShutdown := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancelShutdown()
 
 	// Shutdown both servers if they exist
 	if tailscaleServer != nil {
@@ -200,6 +209,8 @@ func runServer(cmd *cobra.Command, args []string) {
 			logrus.WithError(err).Error("Local server shutdown failed")
 		}
 	}
+
+	cancelRequests()
 
 	logrus.Info("Server stopped")
 }
