@@ -3,24 +3,11 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/sierrasoftworks/tailon/pkg/apps"
-	"github.com/sierrasoftworks/tailon/pkg/config"
 	"github.com/sierrasoftworks/tailon/pkg/userctx"
 	"github.com/sirupsen/logrus"
 )
-
-// ApplicationResponse represents the JSON response for application details
-type ApplicationResponse struct {
-	Config         config.ApplicationConfig `json:"config"`
-	State          apps.ApplicationState    `json:"state"`
-	PID            int                      `json:"pid,omitempty"`
-	LastExitCode   int                      `json:"last_exit_code"`
-	StateChangedBy *userctx.User            `json:"state_changed_by,omitempty"`
-	StateChangedAt *time.Time               `json:"state_changed_at,omitempty"`
-}
 
 // HandleGetApps returns all configured applications (filtered by user permissions)
 func (s *Server) HandleGetApps(w http.ResponseWriter, r *http.Request) {
@@ -31,18 +18,18 @@ func (s *Server) HandleGetApps(w http.ResponseWriter, r *http.Request) {
 	}
 
 	allApps := s.manager.GetApps()
-	authorizedApps := make(map[string]ApplicationResponse)
+	authorizedApps := make(map[string]ApplicationResponseV1)
 
 	// Filter applications based on user permissions
+	viewerRule := AppViewer()
 	for appName, appData := range allApps {
 		// Create a dummy vars map for rule evaluation
 		vars := map[string]string{"app_name": appName}
 
-		// Check if user has viewer role or higher for this app
-		viewerRule := AppViewer()
-		if viewerRule.IsAllowed(vars, user) {
+		role := viewerRule.GetActiveRole(vars, user)
+		if role.IsAllowed() {
 			// Create response object
-			response := ApplicationResponse{
+			response := ApplicationResponseV1{
 				Config:         appData.Config,
 				State:          appData.State,
 				PID:            appData.PID,
@@ -52,12 +39,8 @@ func (s *Server) HandleGetApps(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Check if user has admin role for this app - if not, remove env variables
-			adminRule := AppAdmin()
-			if !adminRule.IsAllowed(vars, user) {
-				// User is not admin, remove environment variables
-				configCopy := appData.Config
-				configCopy.Env = nil // Remove environment variables
-				response.Config = configCopy
+			if role != userctx.RoleAdmin {
+				response.Sanitize()
 			}
 
 			authorizedApps[appName] = response
@@ -77,8 +60,8 @@ func (s *Server) HandleGetApp(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	appName := vars["app_name"]
 
-	// Check authorization - require viewer role to view application details
-	if !s.RequireAuthorization(w, r, AppViewer()) {
+	role := s.RequireAuthorization(w, r, AppViewer())
+	if !role.IsAllowed() {
 		return
 	}
 
@@ -89,7 +72,7 @@ func (s *Server) HandleGetApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create response object
-	response := ApplicationResponse{
+	response := ApplicationResponseV1{
 		Config:         app.Config,
 		State:          app.State,
 		PID:            app.PID,
@@ -99,15 +82,8 @@ func (s *Server) HandleGetApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user has admin role for this app - if not, remove env variables
-	user := userctx.FromContext(r.Context())
-	if user != nil {
-		adminRule := AppAdmin()
-		if !adminRule.IsAllowed(vars, user) {
-			// User is not admin, remove environment variables
-			configCopy := app.Config
-			configCopy.Env = nil // Remove environment variables
-			response.Config = configCopy
-		}
+	if role != userctx.RoleAdmin {
+		response.Sanitize()
 	}
 
 	w.Header().Set("Content-Type", "application/json")

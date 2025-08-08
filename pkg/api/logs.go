@@ -16,7 +16,7 @@ func (s *Server) HandleLogs(w http.ResponseWriter, r *http.Request) {
 	appName := vars["app_name"]
 
 	// Check authorization - require viewer role to view logs
-	if !s.RequireAuthorization(w, r, AppViewer()) {
+	if !s.RequireAuthorization(w, r, AppViewer()).IsAllowed() {
 		return
 	}
 

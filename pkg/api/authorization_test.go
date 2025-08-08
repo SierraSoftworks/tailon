@@ -18,7 +18,7 @@ func TestAuthorizationRules(t *testing.T) {
 		ID:          "test-user",
 		DisplayName: "Test User",
 		IsAnonymous: false,
-		ApplicationRoles: map[string]string{
+		ApplicationRoles: map[string]userctx.Role{
 			"app1": userctx.RoleAdmin,
 			"app2": userctx.RoleOperator,
 			"app3": userctx.RoleViewer,
@@ -55,7 +55,7 @@ func TestAuthorizationRules(t *testing.T) {
 			if tt.appName != "" {
 				vars["app_name"] = tt.appName
 			}
-			result := tt.rule.IsAllowed(vars, user)
+			result := tt.rule.GetActiveRole(vars, user).IsAllowed()
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -66,7 +66,7 @@ func TestAppRulesFromURL(t *testing.T) {
 		ID:          "test-user",
 		DisplayName: "Test User",
 		IsAnonymous: false,
-		ApplicationRoles: map[string]string{
+		ApplicationRoles: map[string]userctx.Role{
 			"test-app": userctx.RoleOperator,
 		},
 	}
@@ -78,9 +78,9 @@ func TestAppRulesFromURL(t *testing.T) {
 	operatorRule := AppOperator()
 	adminRule := AppAdmin()
 
-	assert.True(t, viewerRule.IsAllowed(vars, user))
-	assert.True(t, operatorRule.IsAllowed(vars, user))
-	assert.False(t, adminRule.IsAllowed(vars, user))
+	assert.Equal(t, viewerRule.GetActiveRole(vars, user), userctx.RoleOperator)
+	assert.Equal(t, operatorRule.GetActiveRole(vars, user), userctx.RoleOperator)
+	assert.Equal(t, adminRule.GetActiveRole(vars, user), userctx.RoleNone)
 }
 
 func TestHandleGetAppsAuthorization(t *testing.T) {
@@ -91,7 +91,7 @@ func TestHandleGetAppsAuthorization(t *testing.T) {
 		ID:          "test-user",
 		DisplayName: "Test User",
 		IsAnonymous: false,
-		ApplicationRoles: map[string]string{
+		ApplicationRoles: map[string]userctx.Role{
 			"test-app": userctx.RoleViewer,
 			// No access to "test-logger"
 		},
@@ -125,7 +125,7 @@ func TestHandleGetAppAuthorization(t *testing.T) {
 				ID:          "test-user",
 				DisplayName: "Test User",
 				IsAnonymous: false,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"test-app": userctx.RoleViewer,
 				},
 			},
@@ -138,7 +138,7 @@ func TestHandleGetAppAuthorization(t *testing.T) {
 				ID:          "test-user",
 				DisplayName: "Test User",
 				IsAnonymous: false,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"other-app": userctx.RoleViewer,
 					// No role for "test-app", and no wildcard role
 				},
@@ -152,7 +152,7 @@ func TestHandleGetAppAuthorization(t *testing.T) {
 				ID:          "$anonymous$",
 				DisplayName: "Anonymous",
 				IsAnonymous: true,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"*": userctx.RoleAdmin, // Default admin role for anonymous users
 				},
 			},
@@ -195,7 +195,7 @@ func TestHandleStartAppAuthorization(t *testing.T) {
 				ID:          "test-user",
 				DisplayName: "Test User",
 				IsAnonymous: false,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"test-app": userctx.RoleOperator,
 				},
 			},
@@ -207,7 +207,7 @@ func TestHandleStartAppAuthorization(t *testing.T) {
 				ID:          "test-user",
 				DisplayName: "Test User",
 				IsAnonymous: false,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"test-app": userctx.RoleAdmin,
 				},
 			},
@@ -219,7 +219,7 @@ func TestHandleStartAppAuthorization(t *testing.T) {
 				ID:          "test-user",
 				DisplayName: "Test User",
 				IsAnonymous: false,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"test-app": userctx.RoleViewer,
 				},
 			},
@@ -231,7 +231,7 @@ func TestHandleStartAppAuthorization(t *testing.T) {
 				ID:          "test-user",
 				DisplayName: "Test User",
 				IsAnonymous: false,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"other-app": userctx.RoleOperator,
 					// No role for "test-app", and no wildcard role
 				},
@@ -273,7 +273,7 @@ func TestRequireAuthorizationWithMultipleRules(t *testing.T) {
 		ID:          "test-user",
 		DisplayName: "Test User",
 		IsAnonymous: false,
-		ApplicationRoles: map[string]string{
+		ApplicationRoles: map[string]userctx.Role{
 			"app1": userctx.RoleViewer,
 			"app2": userctx.RoleAdmin,
 		},
@@ -294,7 +294,7 @@ func TestRequireAuthorizationWithMultipleRules(t *testing.T) {
 	allowed := server.RequireAuthorization(recorder, req,
 		AppOperator(), // This will succeed (user has admin for app2, which >= operator)
 		AppAdmin(),    // This will also succeed (user has admin for app2)
-	)
+	).IsAllowed()
 
 	assert.True(t, allowed, "Should be allowed because user has admin role for app2")
 	assert.Equal(t, http.StatusOK, recorder.Code)
@@ -302,7 +302,7 @@ func TestRequireAuthorizationWithMultipleRules(t *testing.T) {
 
 func TestRestrictiveDefaultRole(t *testing.T) {
 	// Test with a server that has no default permissions for anonymous users
-	server, _ := SetupTestServerWithDefaultRole(userctx.RoleNone)
+	server, _ := SetupTestServer()
 
 	// Create a request without user context (will get anonymous user with RoleNone)
 	req := httptest.NewRequest("GET", "/api/v1/apps/test-app", nil)

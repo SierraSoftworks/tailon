@@ -15,7 +15,7 @@ func (s *Server) HandleStartApp(w http.ResponseWriter, r *http.Request) {
 	appName := vars["app_name"]
 
 	// Check authorization - require operator role to start applications
-	if !s.RequireAuthorization(w, r, AppOperator()) {
+	if !s.RequireAuthorization(w, r, AppOperator()).IsAllowed() {
 		return
 	}
 
@@ -35,7 +35,7 @@ func (s *Server) HandleStopApp(w http.ResponseWriter, r *http.Request) {
 	appName := vars["app_name"]
 
 	// Check authorization - require operator role to stop applications
-	if !s.RequireAuthorization(w, r, AppOperator()) {
+	if !s.RequireAuthorization(w, r, AppOperator()).IsAllowed() {
 		return
 	}
 
@@ -70,7 +70,7 @@ func (s *Server) HandleRestartApp(w http.ResponseWriter, r *http.Request) {
 	appName := vars["app_name"]
 
 	// Check authorization - require operator role to restart applications
-	if !s.RequireAuthorization(w, r, AppOperator()) {
+	if !s.RequireAuthorization(w, r, AppOperator()).IsAllowed() {
 		return
 	}
 

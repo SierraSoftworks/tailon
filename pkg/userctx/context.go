@@ -11,16 +11,16 @@ import (
 
 // User represents a user making requests to the system
 type User struct {
-	ID               string            `json:"id"`
-	DisplayName      string            `json:"display_name"`
-	LoginName        string            `json:"login_name,omitempty"`
-	Node             string            `json:"node,omitempty"`
-	IsAnonymous      bool              `json:"is_anonymous"`
-	IPAddress        string            `json:"ip_address,omitempty"` // Track IP for audit logging
-	ApplicationRoles map[string]string `json:"app_roles,omitempty"`
+	ID               string          `json:"id"`
+	DisplayName      string          `json:"display_name"`
+	LoginName        string          `json:"login_name,omitempty"`
+	Node             string          `json:"node,omitempty"`
+	IsAnonymous      bool            `json:"is_anonymous"`
+	IPAddress        string          `json:"ip_address,omitempty"` // Track IP for audit logging
+	ApplicationRoles map[string]Role `json:"app_roles,omitempty"`
 }
 
-func (u *User) GetRole(app string) string {
+func (u *User) GetRole(app string) Role {
 	if role, ok := u.ApplicationRoles[app]; ok {
 		if role == RoleAdmin || role == RoleOperator || role == RoleViewer {
 			return role
@@ -37,7 +37,7 @@ func (u *User) GetRole(app string) string {
 }
 
 // AnonymousFromIP creates an anonymous user with IP-based tracking
-func AnonymousFromIP(remoteAddr, defaultRole string) *User {
+func AnonymousFromIP(remoteAddr string, defaultRole Role) *User {
 	// Extract IP from address (remove port)
 	host, _, err := net.SplitHostPort(remoteAddr)
 	if err != nil {
@@ -50,31 +50,31 @@ func AnonymousFromIP(remoteAddr, defaultRole string) *User {
 		DisplayName: fmt.Sprintf("Anonymous (%s)", host),
 		IsAnonymous: true,
 		IPAddress:   host,
-		ApplicationRoles: map[string]string{
+		ApplicationRoles: map[string]Role{
 			"*": defaultRole,
 		},
 	}
 }
 
 // Anonymous returns the default anonymous user (for backward compatibility)
-func Anonymous(defaultRole string) *User {
+func Anonymous(defaultRole Role) *User {
 	return &User{
 		ID:          "$anonymous$",
 		DisplayName: "Anonymous",
 		IsAnonymous: true,
-		ApplicationRoles: map[string]string{
+		ApplicationRoles: map[string]Role{
 			"*": defaultRole,
 		},
 	}
 }
 
 // NewTailscaleUser creates a user from Tailscale user information
-func NewTailscaleUser(userInfo *TailscaleUserInfo, defaultRole string) *User {
+func NewTailscaleUser(userInfo *TailscaleUserInfo, defaultRole Role) *User {
 	if userInfo == nil {
 		return Anonymous(defaultRole)
 	}
 
-	roles := map[string]string{
+	roles := map[string]Role{
 		"*": defaultRole,
 	}
 
@@ -163,7 +163,7 @@ func WithUser(ctx context.Context, user *User) context.Context {
 	return context.WithValue(ctx, userContextKey, user)
 }
 
-func WithDefaultRole(ctx context.Context, defaultRole string) context.Context {
+func WithDefaultRole(ctx context.Context, defaultRole Role) context.Context {
 	return context.WithValue(ctx, defaultRoleContextKey, defaultRole)
 }
 
@@ -190,8 +190,8 @@ func GetLoggerFromContext(ctx context.Context) *logrus.Entry {
 	})
 }
 
-func getDefaultRoleFromContext(ctx context.Context) string {
-	if defaultRole, ok := ctx.Value(defaultRoleContextKey).(string); ok {
+func getDefaultRoleFromContext(ctx context.Context) Role {
+	if defaultRole, ok := ctx.Value(defaultRoleContextKey).(Role); ok {
 		return defaultRole
 	}
 

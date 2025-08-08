@@ -36,7 +36,7 @@ func TestApplicationStateTracking(t *testing.T) {
 		LoginName:   "test@example.com",
 		Node:        "test-node",
 		IsAnonymous: false,
-		ApplicationRoles: map[string]string{
+		ApplicationRoles: map[string]userctx.Role{
 			"long-running-test": userctx.RoleAdmin, // Give admin access to the test app
 		},
 	}

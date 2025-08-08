@@ -55,10 +55,10 @@ func TestHandleGetAppEnvironmentFiltering(t *testing.T) {
 	server, _ := SetupTestServer()
 
 	tests := []struct {
-		name           string
-		user           *userctx.User
-		shouldSeeEnv   bool
-		description    string
+		name         string
+		user         *userctx.User
+		shouldSeeEnv bool
+		description  string
 	}{
 		{
 			name: "admin user sees env vars",
@@ -66,7 +66,7 @@ func TestHandleGetAppEnvironmentFiltering(t *testing.T) {
 				ID:          "admin-user",
 				DisplayName: "Admin User",
 				IsAnonymous: false,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"test-app": userctx.RoleAdmin,
 				},
 			},
@@ -79,7 +79,7 @@ func TestHandleGetAppEnvironmentFiltering(t *testing.T) {
 				ID:          "operator-user",
 				DisplayName: "Operator User",
 				IsAnonymous: false,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"test-app": userctx.RoleOperator,
 				},
 			},
@@ -92,7 +92,7 @@ func TestHandleGetAppEnvironmentFiltering(t *testing.T) {
 				ID:          "viewer-user",
 				DisplayName: "Viewer User",
 				IsAnonymous: false,
-				ApplicationRoles: map[string]string{
+				ApplicationRoles: map[string]userctx.Role{
 					"test-app": userctx.RoleViewer,
 				},
 			},
@@ -105,17 +105,17 @@ func TestHandleGetAppEnvironmentFiltering(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/api/v1/apps/test-app", nil)
 			req = mux.SetURLVars(req, map[string]string{"app_name": "test-app"})
-			
+
 			// Add user context
 			ctx := userctx.WithUser(req.Context(), tt.user)
 			req = req.WithContext(ctx)
-			
+
 			recorder := httptest.NewRecorder()
 			server.HandleGetApp(recorder, req)
 
 			assert.Equal(t, http.StatusOK, recorder.Code, tt.description)
 
-			var response ApplicationResponse
+			var response ApplicationResponseV1
 			err := json.Unmarshal(recorder.Body.Bytes(), &response)
 			assert.NoError(t, err)
 
