@@ -113,13 +113,13 @@ applications:
 
 ### Security Configuration
 
-Tailon includes security features to control access and protect sensitive information:
+Tailon includes comprehensive security features to control access and protect sensitive information:
 
 ```yaml
 # Security configuration
 security:
-  # Whether to allow anonymous users when Tailscale is disabled
-  allow_anonymous: true
+  # Default role for anonymous users (when Tailscale is disabled)
+  default_role: "admin"     # Options: admin, operator, viewer, or "" (none)
   
   # Restrict anonymous access to specific IP ranges
   allowed_ips:
@@ -137,28 +137,91 @@ applications:
       - "DATABASE_URL=postgres://..."
 ```
 
+#### Role-Based Access Control
+
+TailOn implements a flexible role-based authorization system with four permission levels:
+
+- **`admin`**: Full access - can view, start, stop, and restart applications
+- **`operator`**: Control access - can view, start, stop, and restart applications (environment variables may be hidden)
+- **`viewer`**: Read-only access - can view application status and logs only
+- **`none` or `""`**: No access - cannot access applications
+
+#### Tailscale User Capabilities
+
+When using Tailscale, you can grant users specific roles for applications using [Tailscale's capabilities feature](https://tailscale.com/kb/1537/grants-app-capabilities). Add the `https://sierrasoftworks/cap/tailon` capability to your Tailscale ACL policy:
+
+```json
+{
+  "acls": [
+    {
+      "action": "accept",
+      "src": ["group:admins"],
+      "dst": ["my-tailon-server:80", "my-tailon-server:443"]
+    }
+  ],
+  "groups": {
+    "group:admins": ["user:admin@example.com"]
+  },
+  "grants": [
+    {
+      "src": ["user:alice@example.com"],
+      "dst": ["my-tailon-server"],
+      "app": {
+        "https://sierrasoftworks/cap/tailon": [
+          {
+            "role": "operator",
+            "applications": ["web-server", "api-service"]
+          }
+        ]
+      }
+    },
+    {
+      "src": ["group:admins"],
+      "dst": ["my-tailon-server"],
+      "app": {
+        "https://sierrasoftworks/cap/tailon": [
+          {
+            "role": "admin",
+            "applications": ["*"]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+In this example:
+
+- `alice@example.com` gets `operator` role for `web-server` and `api-service` applications
+- Members of `group:admins` get `admin` role for all applications (`*` wildcard)
+
+Note that if Alice is a member of the `admins` group then the most specific rule will win and
+she will **NOT** have `admin` on `web-server` or `api-service` (instead she will be limited to `operator`
+access).
+
 #### Security Recommendations
 
 **For Production Environments:**
 
 ```yaml
 security:
-  allow_anonymous: false    # Require Tailscale authentication
-  hide_env_vars: true      # Hide sensitive environment variables
+  default_role: ""          # No default access for anonymous users
+  hide_env_vars: true       # Hide sensitive environment variables
 
 tailscale:
-  enabled: true            # Use Tailscale for secure access
+  enabled: true             # Use Tailscale for secure access
 ```
 
 **For Development/Internal Use:**
 
 ```yaml
-listen: "localhost:8080"   # Bind to localhost only
+listen: "localhost:8080"    # Bind to localhost only
 security:
-  allow_anonymous: true
+  default_role: "admin"     # Allow full access for development
   allowed_ips:
-    - "127.0.0.1"          # Only allow localhost access
-  hide_env_vars: false     # Allow viewing env vars for debugging
+    - "127.0.0.1"           # Only allow localhost access
+  hide_env_vars: false      # Allow viewing env vars for debugging
 ```
 
 ### Managing Applications

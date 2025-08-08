@@ -135,15 +135,25 @@ listen: "localhost:8080"
     createSecuritySection() {
         const section = Utils.createElement('div', { className: 'docs-section' });
         
-        const title = Utils.createElement('h2', {}, ['Security Configuration']);
+        const title = Utils.createElement('h2', {}, ['Security & Authorization']);
         
         const intro = Utils.createElement('p', {}, [
-            'TailOn includes comprehensive security features to control access and protect sensitive information.'
+            'TailOn includes comprehensive security features with role-based access control and Tailscale integration.'
         ]);
 
-        const securityConfig = this.createSubSection('Security Settings', `security:
-  # Allow anonymous users when Tailscale is disabled
-  allow_anonymous: true
+        const rolesInfo = Utils.createElement('div', { className: 'info-box' }, [
+            Utils.createElement('h4', {}, ['Available Roles']),
+            Utils.createElement('ul', {}, [
+                Utils.createElement('li', {}, [Utils.createElement('strong', {}, ['admin']), ': Full access - view, start, stop, and restart applications']),
+                Utils.createElement('li', {}, [Utils.createElement('strong', {}, ['operator']), ': Control access - view, start, stop, and restart (env vars may be hidden)']),
+                Utils.createElement('li', {}, [Utils.createElement('strong', {}, ['viewer']), ': Read-only access - view status and logs only']),
+                Utils.createElement('li', {}, [Utils.createElement('strong', {}, ['none']), ': No access to applications'])
+            ])
+        ]);
+
+        const securityConfig = this.createSubSection('Basic Security Configuration', `security:
+  # Default role for anonymous users (when Tailscale is disabled)
+  default_role: "admin"     # Options: admin, operator, viewer, or "" (none)
   
   # Restrict anonymous access to specific IP ranges
   allowed_ips:
@@ -153,27 +163,69 @@ listen: "localhost:8080"
   # Hide environment variables in API responses
   hide_env_vars: true`);
 
-        const prodConfig = this.createSubSection('Production Recommendations', `# Secure production setup
+        const tailscaleCaps = this.createSubSection('Tailscale User Capabilities', `# In your Tailscale ACL policy.hujson
+{
+  "grants": [
+    {
+      "src": ["user:alice@example.com"],
+      "dst": ["my-tailon-server"],
+      "app": {
+        "https://sierrasoftworks/cap/tailon": [
+          {
+            "role": "operator",
+            "applications": ["web-server", "api-service"]
+          }
+        ]
+      }
+    },
+    {
+      "src": ["group:admins"],
+      "dst": ["my-tailon-server"],
+      "app": {
+        "https://sierrasoftworks/cap/tailon": [
+          {
+            "role": "admin",
+            "applications": ["*"]
+          }
+        ]
+      }
+    }
+  ]
+}`);
+
+        const prodConfig = this.createSubSection('Production Configuration', `# Secure production setup
 security:
-  allow_anonymous: false    # Require Tailscale authentication
-  hide_env_vars: true      # Hide sensitive environment variables
+  default_role: ""          # No default access for anonymous users
+  hide_env_vars: true       # Hide sensitive environment variables
 
 tailscale:
-  enabled: true            # Use Tailscale for secure access
+  enabled: true             # Use Tailscale for secure access
   name: "prod-tailon-server"`);
+
+        const tailscaleLink = Utils.createElement('p', {}, [
+            'Learn more about Tailscale capabilities: ',
+            Utils.createElement('a', {
+                href: 'https://tailscale.com/kb/1537/grants-app-capabilities',
+                target: '_blank',
+                rel: 'noopener noreferrer'
+            }, ['Tailscale App Capabilities Documentation'])
+        ]);
 
         const auditInfo = Utils.createElement('div', { className: 'info-box' }, [
             Utils.createElement('h4', {}, ['Audit Logging']),
             Utils.createElement('p', {}, [
                 'All user actions are logged with user identification, IP addresses, and timestamps. Anonymous users are tracked by IP address in the format ',
                 Utils.createElement('code', {}, ['$anonymous-192.168.1.100$']),
-                '.'
+                '. Role assignments are logged for each action.'
             ])
         ]);
 
         section.appendChild(title);
         section.appendChild(intro);
+        section.appendChild(rolesInfo);
         section.appendChild(securityConfig);
+        section.appendChild(tailscaleCaps);
+        section.appendChild(tailscaleLink);
         section.appendChild(prodConfig);
         section.appendChild(auditInfo);
         

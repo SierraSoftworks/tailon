@@ -2,9 +2,74 @@ openapi: 3.0.3
 info:
   title: TailOn API Documentation
   description: |
-    A web service for managing applications over Tailscale. This API allows you to
+    A web service for mana  /api/v1/apps:
+    get:
+      summary: List all configured applications
+      description: |
+        Returns a list of all applications configured in the system with their current status.
+        Only returns applications for which the user has at least viewer role.
+      operationId: getApps
+      tags:
+        - Applications
+      security:
+        - TailscaleAuth: []
+        - AnonymousAuth: []
+      responses:
+        '200':
+          description: List of applications (filtered by user permissions)
+          content:
+            application/json:
+              schema:
+              example:
+        '401':
+          description: Unauthorized - no user context available
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Unauthorized"ons over Tailscale. This API allows you to
     start, stop, restart, and monitor applications remotely, with real-time log streaming
     capabilities via Server-Sent Events.
+    
+    ## Authorization
+    
+    TailOn implements role-based access control with four permission levels:
+    
+    - **admin**: Full access - can view, start, stop, and restart applications
+    - **operator**: Control access - can view, start, stop, and restart applications (environment variables may be hidden)
+    - **viewer**: Read-only access - can view application status and logs only
+    - **none**: No access to applications
+    
+    ### Anonymous Users
+    
+    When Tailscale is disabled, anonymous users are assigned a default role that can be configured
+    via the `security.default_role` setting. Anonymous users are tracked by IP address.
+    
+    ### Tailscale User Capabilities
+    
+    When using Tailscale, users can be granted specific roles for applications using the
+    `https://sierrasoftworks/cap/tailon` capability in your Tailscale ACL policy:
+    
+    ```json
+    {
+      "grants": [
+        {
+          "src": ["user:alice@example.com"],
+          "dst": ["my-tailon-server"],
+          "app": {
+            "https://sierrasoftworks/cap/tailon": [
+              {
+                "role": "operator",
+                "applications": ["web-server", "api-service"]
+              }
+            ]
+          }
+        }
+      ]
+    }
+    ```
+    
+    For more information, see: https://tailscale.com/kb/1537/grants-app-capabilities
   version: 1.0.0
   contact:
     name: SierraSoftworks
@@ -102,10 +167,15 @@ paths:
   /api/v1/apps/{app_name}:
     get:
       summary: Get application details
-      description: Returns detailed information about a specific application
+      description: |
+        Returns detailed information about a specific application.
+        Requires viewer role or higher for the specified application.
       operationId: getApp
       tags:
         - Applications
+      security:
+        - TailscaleAuth: []
+        - AnonymousAuth: []
       parameters:
         - name: app_name
           in: path
@@ -121,6 +191,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application'
+        '401':
+          description: Unauthorized - no user context available
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Unauthorized"
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Forbidden: insufficient permissions"
         '404':
           description: Application not found
           content:
@@ -132,10 +216,15 @@ paths:
   /api/v1/apps/{app_name}/start:
     post:
       summary: Start an application
-      description: Starts the specified application if it's not already running
+      description: |
+        Starts the specified application if it's not already running.
+        Requires operator role or higher for the specified application.
       operationId: startApp
       tags:
         - Application Control
+      security:
+        - TailscaleAuth: []
+        - AnonymousAuth: []
       parameters:
         - name: app_name
           in: path
@@ -160,6 +249,20 @@ paths:
               schema:
                 type: string
               example: "application echo-server is already running"
+        '401':
+          description: Unauthorized - no user context available
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Unauthorized"
+        '403':
+          description: Forbidden - insufficient permissions (requires operator role)
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Forbidden: insufficient permissions"
         '404':
           description: Application not found
           content:
@@ -170,10 +273,15 @@ paths:
   /api/v1/apps/{app_name}/stop:
     post:
       summary: Stop an application
-      description: Stops the specified application if it's currently running
+      description: |
+        Stops the specified application if it's currently running.
+        Requires operator role or higher for the specified application.
       operationId: stopApp
       tags:
         - Application Control
+      security:
+        - TailscaleAuth: []
+        - AnonymousAuth: []
       parameters:
         - name: app_name
           in: path
@@ -194,24 +302,25 @@ paths:
           description: Application stopped successfully
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/StatusResponse'
-              examples:
-                normal_stop:
-                  summary: Normal stop
-                  value:
-                    status: stopped
-                force_stop:
-                  summary: Force stop
-                  value:
-                    status: force_stopped
         '400':
           description: Failed to stop application (e.g., not running)
           content:
             text/plain:
+              example: "application echo-server is not running"
+        '401':
+          description: Unauthorized - no user context available
+          content:
+            text/plain:
               schema:
                 type: string
-              example: "application echo-server is not running"
+              example: "Unauthorized"
+        '403':
+          description: Forbidden - insufficient permissions (requires operator role)
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Forbidden: insufficient permissions"
         '404':
           description: Application not found
           content:
@@ -225,9 +334,13 @@ paths:
       description: |
         Restarts the specified application by stopping it (if running) and then starting it again.
         This operation will succeed even if the application was not previously running.
+        Requires operator role or higher for the specified application.
       operationId: restartApp
       tags:
         - Application Control
+      security:
+        - TailscaleAuth: []
+        - AnonymousAuth: []
       parameters:
         - name: app_name
           in: path
@@ -251,6 +364,20 @@ paths:
             text/plain:
               schema:
                 type: string
+        '401':
+          description: Unauthorized - no user context available
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Unauthorized"
+        '403':
+          description: Forbidden - insufficient permissions (requires operator role)
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Forbidden: insufficient permissions"
         '404':
           description: Application not found
           content:
@@ -265,9 +392,14 @@ paths:
         Returns application logs. The response format depends on the Accept header:
         - `application/json` (default): Returns logs as JSON array
         - `text/event-stream`: Streams logs in real-time using Server-Sent Events
+        
+        Requires viewer role or higher for the specified application.
       operationId: getLogs
       tags:
         - Logs
+      security:
+        - TailscaleAuth: []
+        - AnonymousAuth: []
       parameters:
         - name: app_name
           in: path
@@ -283,7 +415,6 @@ paths:
           schema:
             type: string
             enum:
-              - application/json
               - text/event-stream
             default: application/json
       responses:
@@ -291,32 +422,25 @@ paths:
           description: Application logs
           content:
             application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LogEntry'
-              example:
-                - timestamp: "2025-08-07T12:00:00Z"
-                  message: "Hello Wed Aug  7 12:00:00 UTC 2025"
-                  source: "stdout"
-                - timestamp: "2025-08-07T12:00:02Z"
-                  message: "Hello Wed Aug  7 12:00:02 UTC 2025"
-                  source: "stdout"
             text/event-stream:
-              schema:
-                type: string
-                format: text/event-stream
-              example: |
-                data: {"timestamp":"2025-08-07T12:00:00Z","message":"Hello Wed Aug  7 12:00:00 UTC 2025","source":"stdout"}
-                data: {"timestamp":"2025-08-07T12:00:02Z","message":"Hello Wed Aug  7 12:00:02 UTC 2025","source":"stdout"}
-        '404':
-          description: Application not found
+        '401':
+          description: Unauthorized - no user context available
           content:
             text/plain:
               schema:
                 type: string
-
-components:
+              example: "Unauthorized"
+        '403':
+          description: Forbidden - insufficient permissions (requires viewer role)
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Forbidden: insufficient permissions"
+        '404':
+          description: Application not found
+          content:
+            text/plain:components:
   schemas:
     User:
       type: object
@@ -345,6 +469,24 @@ components:
           type: boolean
           description: Whether this is an anonymous user
           example: false
+        ip_address:
+          type: string
+          description: IP address of the user (for audit logging)
+          example: "192.168.1.100"
+        app_roles:
+          type: object
+          description: Application-specific role assignments
+          additionalProperties:
+            type: string
+            enum:
+              - admin
+              - operator
+              - viewer
+              - ""
+          example:
+            "web-server": "admin"
+            "api-service": "operator"
+            "*": "viewer"
 
     Application:
       type: object
@@ -482,6 +624,24 @@ components:
           schema:
             type: string
           example: "Internal server error"
+
+  securitySchemes:
+    TailscaleAuth:
+      type: http
+      description: |
+        Tailscale user authentication with role-based access control.
+        Users are granted roles via Tailscale capabilities using the
+        `https://sierrasoftworks/cap/tailon` capability.
+      scheme: bearer
+      
+    AnonymousAuth:
+      type: apiKey
+      description: |
+        Anonymous user access (when Tailscale is disabled).
+        Users are assigned a default role configured via `security.default_role`.
+        Anonymous users are tracked by IP address.
+      in: header
+      name: X-Anonymous-Auth
 
 tags:
   - name: Applications

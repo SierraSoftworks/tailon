@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/sierrasoftworks/tailon/pkg/apps"
 	"github.com/sierrasoftworks/tailon/pkg/userctx"
 	"github.com/sirupsen/logrus"
 )
@@ -18,7 +19,7 @@ func (s *Server) HandleGetApps(w http.ResponseWriter, r *http.Request) {
 	}
 
 	allApps := s.manager.GetApps()
-	authorizedApps := make(map[string]interface{})
+	authorizedApps := make(map[string]*apps.Application)
 
 	// Filter applications based on user permissions
 	for appName, appData := range allApps {
