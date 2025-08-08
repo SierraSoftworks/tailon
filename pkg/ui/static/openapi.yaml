@@ -51,7 +51,7 @@ info:
     ### Tailscale User Capabilities
     
     When using Tailscale, users can be granted specific roles for applications using the
-    `https://sierrasoftworks/cap/tailon` capability in your Tailscale ACL policy:
+    `sierrasoftworks/cap/tailon` capability in your Tailscale ACL policy:
     
     ```json
     {
@@ -60,7 +60,7 @@ info:
           "src": ["user:alice@example.com"],
           "dst": ["my-tailon-server"],
           "app": {
-            "https://sierrasoftworks/cap/tailon": [
+            "sierrasoftworks/cap/tailon": [
               {
                 "role": "operator",
                 "applications": ["web-server", "api-service"]
@@ -641,7 +641,7 @@ paths:
       description: |
         Tailscale user authentication with role-based access control.
         Users are granted roles via Tailscale capabilities using the
-        `https://sierrasoftworks/cap/tailon` capability.
+        `sierrasoftworks/cap/tailon` capability.
       scheme: bearer
       
     AnonymousAuth:

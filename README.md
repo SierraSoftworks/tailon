@@ -140,7 +140,7 @@ TailOn implements a flexible role-based authorization system with four permissio
 
 #### Tailscale User Capabilities
 
-When using Tailscale, you can grant users specific roles for applications using [Tailscale's capabilities feature](https://tailscale.com/kb/1537/grants-app-capabilities). Add the `https://sierrasoftworks/cap/tailon` capability to your Tailscale ACL policy:
+When using Tailscale, you can grant users specific roles for applications using [Tailscale's capabilities feature](https://tailscale.com/kb/1537/grants-app-capabilities). Add the `sierrasoftworks/cap/tailon` capability to your Tailscale ACL policy:
 
 ```json
 {
@@ -159,7 +159,7 @@ When using Tailscale, you can grant users specific roles for applications using 
       "src": ["user:alice@example.com"],
       "dst": ["my-tailon-server"],
       "app": {
-        "https://sierrasoftworks/cap/tailon": [
+        "sierrasoftworks/cap/tailon": [
           {
             "role": "operator",
             "applications": ["web-server", "api-service"]
@@ -171,7 +171,7 @@ When using Tailscale, you can grant users specific roles for applications using 
       "src": ["group:admins"],
       "dst": ["my-tailon-server"],
       "app": {
-        "https://sierrasoftworks/cap/tailon": [
+        "sierrasoftworks/cap/tailon": [
           {
             "role": "admin",
             "applications": ["*"]

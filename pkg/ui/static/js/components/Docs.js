@@ -165,7 +165,7 @@ listen: "localhost:8080"
       "src": ["user:alice@example.com"],
       "dst": ["my-tailon-server"],
       "app": {
-        "https://sierrasoftworks/cap/tailon": [
+        "sierrasoftworks/cap/tailon": [
           {
             "role": "operator",
             "applications": ["web-server", "api-service"]
@@ -177,7 +177,7 @@ listen: "localhost:8080"
       "src": ["group:admins"],
       "dst": ["my-tailon-server"],
       "app": {
-        "https://sierrasoftworks/cap/tailon": [
+        "sierrasoftworks/cap/tailon": [
           {
             "role": "admin",
             "applications": ["*"]
