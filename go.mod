@@ -8,7 +8,7 @@ require (
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
-	tailscale.com v1.88.2
+	tailscale.com v1.88.3
 )
 
 require (
