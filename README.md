@@ -6,6 +6,16 @@ This project provides a web-based application manager that runs on your [Tailsca
 
 ## Installation
 
+### Homebrew
+
+Install with [Homebrew](https://brew.sh):
+
+```sh
+brew install sierrasoftworks/tap/tailon
+```
+
+### Go
+
 ```bash
 go install github.com/sierrasoftworks/tailon@latest
 ```
