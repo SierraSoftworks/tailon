@@ -1,6 +1,6 @@
 module github.com/sierrasoftworks/tailon
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/gorilla/mux v1.8.1
@@ -8,7 +8,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	gopkg.in/yaml.v3 v3.0.1
-	tailscale.com v1.102.2
+	tailscale.com v1.102.3
 )
 
 require (
